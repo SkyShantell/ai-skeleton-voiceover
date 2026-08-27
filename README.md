@@ -106,3 +106,23 @@ The primary silence-cleaning path uses the public Gradio Space:
 `NeuralFalcon/Remove-Silence-From-Audio`
 
 The app requests the Space's `process_audio` API with the generated MP3 and the configured keep-silence duration. It then converts the returned audio back to MP3. If the Space is unavailable or its endpoint changes, the local fallback uses the same core parameters: 100 ms minimum silence, -45 dB threshold, configured silence padding, and a dynamic threshold fallback for quiet recordings.
+
+
+## VA voice presets
+
+The app exposes only these approved ElevenLabs voices and automatically loads the exact saved preset whenever the VA changes voices:
+
+- **Julie US — Confident & Conversational** — `5WTtMD3P8AHUXTVqCYcJ`  
+  Speed `1.13` · Stability `66%` · Similarity `100%` · Style `26%` · Speaker boost `On`
+- **Mark US — ConvoAI** — `1SM7GgM6IMuvQlz2BwM3`  
+  Speed `1.14` · Stability `50%` · Similarity `75%` · Style `0%` · Speaker boost `On`
+- **Lucy UK — Fresh & Casual** — `lcMyyd2HUfFzxdCaC4Ta`  
+  Speed `1.15` · Stability `50%` · Similarity `75%` · Style `0%` · Speaker boost `On`
+- **Toby UK — Raspy, Youthful & Articulate** — `pYDLV125o4CgqP8i49Lg`  
+  Speed `1.16` · Stability `100%` · Similarity `100%` · Style `56%` · Speaker boost `On`
+
+The default **Keep silence around cuts** value is **0.03 seconds**. Voice settings are shown in a clear preset card, while manual tuning is tucked into an Advanced expander so the normal VA workflow stays simple.
+
+## VA-friendly interface
+
+The interface is intentionally large and high-contrast with a simple numbered flow: **1) Product + voice setup → 2) Review script + compliance → 3) Generate clean audio → 4) Download**. Input text, buttons, status banners, and the script editor are enlarged for easier daily use.

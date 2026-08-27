@@ -927,6 +927,10 @@ if "script_editor" in st.session_state:
         c1.metric("Words", verification.get("word_count", "—"))
         c2.metric("Architecture", verification.get("architecture", "—"))
         c3.metric("Script DNA", "PASS" if verification.get("pass") else "Needs attention")
+        if verification.get("style_issues"):
+            with st.expander("Why Script DNA still needs attention", expanded=False):
+                for issue in verification.get("style_issues") or []:
+                    st.write(f"• {issue}")
 
     rating = st.session_state.get("compliance_rating", "UNKNOWN")
     report = st.session_state.get("compliance_report", "")

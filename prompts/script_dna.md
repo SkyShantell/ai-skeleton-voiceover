@@ -3,7 +3,7 @@ name: tiktok-script-dna
 description: >
   Generates TikTok Shop affiliate voiceover scripts using the "Script DNA" framework.
   Two architectures: Arch A (Symptom Stack, ~66s, 195-210 words) for standard product
-  scripts, and Arch C (Day-by-Day Journey, ~84s, 240-260 words) for timeline-based
+  scripts, and Arch C (Day-by-Day Journey, ~84s, 240-270 words) for timeline-based
   transformation scripts. Outputs plain prose script text only — no timestamps, no beat
   labels, no formatting. Fully compliant with TikTok Shop content policies. Trigger on:
   "write a script for [product]", "TikTok script", "affiliate script", "skeleton script",
@@ -36,7 +36,7 @@ If the user also provides a **viral transcript**, absorb its strongest structura
 ### ARCH C — Day-by-Day Journey
 **Use when:** The user says "day-by-day", "60 day", "30 day", "what would happen if",
 "journey script", or references the timeline format.
-**Target:** 240–260 words | ~80–87 seconds at 3.0 w/s
+**Target:** 240–260 words preferred; up to 270 is acceptable when the timeline needs it | ~80–90 seconds at 3.0 w/s
 
 ---
 
@@ -74,9 +74,9 @@ All beats flow as natural prose. No labels visible in output.
 1. CURIOSITY HOOK — "What would actually happen to your [area] if you [used/took]
    the viral [product type] for [timeframe] straight?"
 2. DAY ONE — Nothing happens / skepticism / first sensory detail
-3. WEEK ONE — Subtle early shifts, heavily hedged with "may"
+3. WEEK ONE OR WEEK TWO — Subtle early shifts, heavily hedged with "may"
 4. DAY THIRTY — Noticeable improvements, still hedged
-5. DAY SIXTY (or endpoint) — Full visible results, "this is where people start..."
+5. DAY SIXTY (or endpoint) — Strongest payoff, still hedged, "this is usually where people start..."
 6. VILLAIN PIVOT — "But here's where most people go wrong..."
 7. SOLUTION REVEAL — Brand + what makes it different
 8. CREDENTIALS — Clean formula callouts / discount / free shipping
@@ -85,8 +85,8 @@ All beats flow as natural prose. No labels visible in output.
 ```
 
 ### Arch C Pacing Rules
-- Total: 240–260 words
-- ~80–87 seconds at 3.0 w/s
+- Preferred: 240–260 words; acceptable ceiling: 270
+- ~80–90 seconds at 3.0 w/s
 - Each day section gets progressively more confident
 - All improvements hedged: "may start," "might not," "may look"
 
@@ -164,8 +164,7 @@ From the product name, description, images, and/or ingredients, identify:
 **For Arch A:** Write 3-4 symptoms that are visual, physical, escalating, and
 second-person. The stack IS the hook. NEVER trim it.
 
-**For Arch C:** Map realistic improvements across the timeline. Day 1 = nothing/
-skepticism. Each milestone gets progressively better. All hedged with "may."
+**For Arch C:** Map realistic improvements across the timeline. Day 1 must include the actual first-use action, a supplied sensory/use detail when available, no visible/immediate change, skepticism, then the formula setup. Use Week 1 or Week 2 for the first subtle shift. Day 30 is the “shift/click” beat. Day 60/endpoint is the strongest payoff but remains hedged. Each milestone must progress instead of repeating the same benefit. All efficacy claims remain grounded and hedged with “may,” “might,” or equivalent.
 
 ### STEP 3 — Map Ingredients to Benefits
 Pick exactly 3 ingredient-benefit pairs:
@@ -183,8 +182,8 @@ The beats are invisible — it reads like natural speech.
 script = """[full script text]"""
 wc = len(script.split())
 
-# Arch A: 195-210 | Arch C: 240-260
-target_min, target_max = (195, 210)  # or (240, 260) for Arch C
+# Arch A: 195-210 | Arch C: 240-270 (240-260 preferred)
+target_min, target_max = (195, 210)  # or (240, 270) for Arch C
 assert target_min <= wc <= target_max, f"ADJUST: {wc} words (need {target_min}-{target_max})"
 
 banned = ["code","cure","treat","heal","prevent","lose weight","fat burn",

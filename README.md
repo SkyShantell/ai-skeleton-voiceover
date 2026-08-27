@@ -137,3 +137,13 @@ Optional Streamlit secret:
 OPENAI_MODEL_IMAGE = "gpt-5.4-mini"
 ```
 If omitted, the app uses `OPENAI_MODEL_SCRIPT` for product-photo reading.
+
+## Script style lock
+
+ARCH A generation includes a canonical sample-style lock based on the supplied Skeleton sample scripts. It enforces the long four-problem opening stack, direct `Because...` reframe, `And no,...` objection, three distinct benefit beats, `But don't...` villain, decisive brand/product reveal, concrete differentiators, and a short callback CTA. Vague meta phrases such as `the listing shows strong trust signals`, `I also like that`, and `One thing I noticed` are rejected and automatically rewritten before compliance runs.
+
+TikTok rating/review-count/sold-count metadata is kept out of Script DNA grounding so the model does not turn marketplace metadata into vague selling copy. Product images and seller-provided product text remain available as grounded sources.
+
+## Arch C sample-style lock
+
+Arch C generation now follows the supplied canonical day-by-day samples: `What would actually happen...` hook, a real Day 1 use/sensory + skepticism beat, Week 1/2 subtle milestone, Day 30 shift/click, Day 60/endpoint payoff, `But here's where/what most people go/get wrong` villain pivot, decisive product reveal, then a short callback + orange-cart CTA. The preferred length remains 240-260 words, with up to 270 accepted when the timeline needs the extra room. Unsupported price, stock, discount, free-shipping, scarcity, and marketplace-meta claims are not added just to mimic the samples.

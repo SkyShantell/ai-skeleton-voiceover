@@ -147,23 +147,9 @@ def _format_script_details(product: dict[str, Any]) -> str:
         lines.append("\nSELLER-PROVIDED PRODUCT DESCRIPTION:")
         lines.append(description)
 
-    trust: list[str] = []
-    sold_count = product.get("sold_count")
-    if isinstance(sold_count, (int, float)) and sold_count >= 0:
-        trust.append(f"TikTok listing sold count: {int(sold_count):,}")
-    rating = product.get("rating")
-    review_count = product.get("review_count")
-    if rating not in (None, ""):
-        trust.append(f"TikTok product rating: {rating}")
-    if isinstance(review_count, (int, float)):
-        trust.append(f"TikTok product review count: {int(review_count):,}")
-    if trust:
-        lines.append("\nCURRENT TIKTOK LISTING TRUST SIGNALS:")
-        lines.extend(f"- {item}" for item in trust)
-
     lines.append(
         "\nSOURCE NOTE: These text/specification details were pulled from the current TikTok Shop listing via SociaVault. "
-        "Selected product photos are analyzed separately before Script DNA runs. Individual customer-review claims, price, stock, and coupon values are excluded from script facts."
+        "Selected product photos are analyzed separately before Script DNA runs. Ratings, review counts, sold counts, individual customer-review claims, price, stock, and coupon values are excluded from Script DNA grounding."
     )
     return "\n".join(lines).strip()
 

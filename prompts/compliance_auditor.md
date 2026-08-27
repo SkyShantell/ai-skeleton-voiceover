@@ -16,6 +16,7 @@ Evaluate all input against these 6 core violation categories:
 1. OFF-PLATFORM DIRECTING (High Risk)
    - Flags: Mentions/visuals of external links, websites, phone numbers, emails, QR codes, or other social media handles (e.g., "Link in my IG bio", "WhatsApp me").
    - Flags: Instructing viewers to buy outside of the native TikTok Shop cart.
+   - IMPORTANT NATIVE-CART EXCEPTION: Native TikTok Shop CTAs such as "Tap the orange cart down below", "Tap the orange cart", "Check the orange cart", or equivalent wording that clearly directs the viewer to TikTok Shop's own orange cart are COMPLIANT. NEVER flag these phrases as off-platform directing. The words "down below" are not an external-link violation when they refer specifically to the orange cart. Only flag phrases such as "link below", "link in bio", websites, external checkout, DMs, phone/email, or other off-platform destinations.
 2. MEDICAL & EXAGGERATED HEALTH CLAIMS (High Risk)
    - Flags: Stating or implying a product treats, cures, or prevents any disease/medical condition (e.g., "cures anxiety", "heals acne overnight").
    - Flags: Attributing medicinal properties to foods, teas, or dietary supplements.

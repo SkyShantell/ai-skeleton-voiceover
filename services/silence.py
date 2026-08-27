@@ -36,7 +36,7 @@ def _to_mp3_bytes(path: str | Path) -> bytes:
     return buf.getvalue()
 
 
-def remove_silence_local(raw_mp3: bytes, keep_seconds: float = 0.03) -> bytes:
+def remove_silence_local(raw_mp3: bytes, keep_seconds: float = 0.05) -> bytes:
     AudioSegment, split_on_silence = _load_pydub()
     source = AudioSegment.from_file(io.BytesIO(raw_mp3), format="mp3")
     keep_ms = max(0, int(float(keep_seconds) * 1000))
@@ -67,7 +67,7 @@ def remove_silence_local(raw_mp3: bytes, keep_seconds: float = 0.03) -> bytes:
 
 def remove_silence_huggingface(
     raw_mp3: bytes,
-    keep_seconds: float = 0.03,
+    keep_seconds: float = 0.05,
     hf_token: str | None = None,
     space_id: str = "NeuralFalcon/Remove-Silence-From-Audio",
 ) -> bytes:
@@ -106,7 +106,7 @@ def remove_silence_huggingface(
 
 def clean_audio(
     raw_mp3: bytes,
-    keep_seconds: float = 0.03,
+    keep_seconds: float = 0.05,
     hf_token: str | None = None,
     use_huggingface: bool = True,
 ) -> tuple[bytes, dict[str, Any]]:

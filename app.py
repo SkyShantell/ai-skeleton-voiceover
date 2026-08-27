@@ -9,7 +9,67 @@ from typing import Any
 
 import streamlit as st
 
-from services.compliance import apply_selected_rewrites, audit_script, parse_final_summary, parse_rewrite_suggestions
+from services import compliance as compliance_service
+
+# Compatibility layer: Streamlit Cloud can briefly deploy a new app.py while an
+# older services/compliance.py is still present. Keep the UI bootable across
+# those versions instead of failing at import time.
+audit_script = compliance_service.audit_script
+
+def _fallback_parse_final_summary(report: str) -> str:
+    import re as _re
+    if not str(report or "").strip():
+        return ""
+    match = _re.search(
+        r"##\s*4\.\s*FINAL SUMMARY\s*(.*?)(?=##\s*\d+\.|\Z)",
+        str(report),
+        flags=_re.I | _re.S,
+    )
+    text = match.group(1) if match else ""
+    text = _re.sub(r"^[\s\-•]+", "", text.strip())
+    return _re.sub(r"\s+", " ", text).strip()
+
+def _fallback_parse_rewrite_suggestions(report: str) -> list[dict[str, str]]:
+    import re as _re
+    if not str(report or "").strip():
+        return []
+    section_match = _re.search(
+        r"##\s*3\.\s*REQUIRED FIXES\s*&\s*SUGGESTED REVIEWS\s*(.*?)(?=##\s*4\.|\Z)",
+        str(report),
+        flags=_re.I | _re.S,
+    )
+    section = section_match.group(1) if section_match else str(report)
+    pattern = _re.compile(
+        r"(?:^|\n)\s*(?:[-*•]|\d+[.)])?\s*\*\*Original:\*\*\s*(.*?)\s*\n\s*(?:[-*•]|\d+[.)])?\s*\*\*Compliant Rewrite:\*\*\s*(.*?)(?=(?:\n\s*(?:[-*•]|\d+[.)])?\s*\*\*Original:\*\*)|\Z)",
+        flags=_re.I | _re.S,
+    )
+    out = []
+    seen = set()
+    for original, rewrite in pattern.findall(section):
+        original = original.strip().strip('`"“” ')
+        rewrite = rewrite.strip().strip('`"“” ')
+        rewrite = _re.split(r"\n\s*(?:[-*]\s*)?\*\*(?:Why|Note|Original):", rewrite, maxsplit=1, flags=_re.I)[0].strip()
+        if original and rewrite and (original, rewrite) not in seen:
+            seen.add((original, rewrite))
+            out.append({"original": original, "rewrite": rewrite})
+    return out
+
+def _fallback_apply_selected_rewrites(api_key: str, model: str, script_text: str, selected: list[dict[str, str]]) -> str:
+    import re as _re
+    updated = str(script_text or "")
+    for item in selected:
+        old = str(item.get("original") or "").strip()
+        new = str(item.get("rewrite") or "").strip()
+        if not old or not new:
+            continue
+        match = _re.search(_re.escape(old), updated, flags=_re.I)
+        if match:
+            updated = updated[:match.start()] + new + updated[match.end():]
+    return updated.strip()
+
+parse_final_summary = getattr(compliance_service, "parse_final_summary", _fallback_parse_final_summary)
+parse_rewrite_suggestions = getattr(compliance_service, "parse_rewrite_suggestions", _fallback_parse_rewrite_suggestions)
+apply_selected_rewrites = getattr(compliance_service, "apply_selected_rewrites", _fallback_apply_selected_rewrites)
 from services.elevenlabs import synthesize
 from services.llm import LLMError, analyze_product_images
 from services.script_engine import extract_product_facts, generate_script

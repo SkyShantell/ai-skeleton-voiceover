@@ -61,43 +61,60 @@ def generate_text(
     return _output_text(response)
 
 
-def generate_multimodal_text(
+def analyze_product_images(
     api_key: str,
     model: str,
-    system_prompt: str,
-    user_prompt: str,
     image_urls: list[str],
-    temperature: float | None = None,
 ) -> str:
-    """Generate text from a prompt plus remote images using the Responses API."""
+    """Read selected official TikTok Shop listing images conservatively.
+
+    Returns only visibly supported packaging/listing-image facts. It intentionally
+    ignores prices, stock, testimonials, and inferred before/after effects.
+    """
+    urls = [str(u).strip() for u in image_urls if str(u).strip().startswith("http")][:8]
+    if not urls:
+        return ""
     if not api_key:
         raise LLMError("OPENAI_API_KEY is missing.")
 
-    client = OpenAI(api_key=api_key)
-    content: list[dict[str, Any]] = [{"type": "input_text", "text": user_prompt}]
-    for url in image_urls:
-        if isinstance(url, str) and url.startswith("http"):
-            content.append({"type": "input_image", "image_url": url})
+    client = OpenAI(api_key=api_key.strip())
+    instructions = """You are a conservative product-image fact reader for a TikTok Shop script workflow.
+Read only text and clearly labeled facts that are visibly present on the supplied OFFICIAL PRODUCT LISTING IMAGES.
 
-    kwargs: dict[str, Any] = {
-        "model": model,
-        "instructions": system_prompt,
-        "input": [{"role": "user", "content": content}],
-    }
-    if temperature is not None:
-        kwargs["temperature"] = temperature
+Extract useful script grounding such as:
+- product/brand name and format
+- ingredients, components, materials, quantities, or included items
+- benefit/support statements literally printed on the image
+- usage directions
+- differentiators, certifications, formula attributes, warnings, and limitations
+- sensory details explicitly stated on the image
+
+HARD RULES:
+- Do NOT use or report price, discounts, coupons, stock, scarcity, shipping, or countdowns.
+- Do NOT treat customer testimonials/reviews as verified product facts.
+- Do NOT infer a benefit from a visual before/after, body change, diagram, icon, pose, or implied result unless corresponding text explicitly states it.
+- Do NOT upgrade wording. Preserve hedges such as 'helps support' and 'may'.
+- If text is unreadable or ambiguous, omit it rather than guessing.
+- Do not use outside knowledge.
+
+Return concise plain text grouped under: VISIBLE PRODUCT IMAGE FACTS, WARNINGS/LIMITATIONS, and IGNORED/UNVERIFIED IMAGE CLAIMS."""
+
+    content: list[dict[str, Any]] = [
+        {
+            "type": "input_text",
+            "text": "Read the selected TikTok Shop product images and extract only visibly supported product facts for downstream Script DNA grounding.",
+        }
+    ]
+    content.extend({"type": "input_image", "image_url": url} for url in urls)
 
     try:
-        response = client.responses.create(**kwargs)
+        response = client.responses.create(
+            model=model,
+            instructions=instructions,
+            input=[{"role": "user", "content": content}],
+        )
     except Exception as exc:
-        if temperature is not None and "temperature" in str(exc).lower():
-            kwargs.pop("temperature", None)
-            try:
-                response = client.responses.create(**kwargs)
-            except Exception as retry_exc:
-                raise LLMError(str(retry_exc)) from retry_exc
-        else:
-            raise LLMError(str(exc)) from exc
+        raise LLMError(f"Product photo analysis failed: {exc}") from exc
     return _output_text(response)
 
 

@@ -11,15 +11,8 @@ import streamlit as st
 
 from services.compliance import audit_script
 from services.elevenlabs import synthesize
-from services.llm import LLMError
+from services.llm import LLMError, analyze_product_images
 from services.script_engine import extract_product_facts, generate_script
-from services.sociavault import (
-    SociaVaultError,
-    analyze_product_images,
-    build_product_details,
-    fetch_product,
-    normalize_product,
-)
 from services.script_library import (
     ScriptLibraryError,
     delete_script,
@@ -27,6 +20,7 @@ from services.script_library import (
     upsert_script,
 )
 from services.silence import clean_audio
+from services.sociavault import SociaVaultError, fetch_tiktok_shop_product
 
 APP_DIR = Path(__file__).resolve().parent
 LOCAL_LIBRARY_PATH = APP_DIR / "data" / "saved_scripts.json"
@@ -375,8 +369,6 @@ def reset_output(clear_loaded_id: bool = False) -> None:
 
 def clear_workspace() -> None:
     reset_output(clear_loaded_id=True)
-    for key in ["scraped_product", "scraped_image_analysis", "scraped_image_urls", "scrape_warning"]:
-        st.session_state.pop(key, None)
     defaults = {
         "product_name_input": "",
         "product_details_input": "",
@@ -386,6 +378,9 @@ def clear_workspace() -> None:
         "visual_cues_input": "",
         "save_script_title": "",
         "tiktok_product_url_input": "",
+        "scraped_product": {},
+        "selected_product_image_urls": [],
+        "product_image_facts": "",
     }
     for key, value in defaults.items():
         st.session_state[key] = value
@@ -465,16 +460,17 @@ def cached_load_library(
 def load_saved_into_workspace(entry: dict[str, Any]) -> None:
     script = str(entry.get("script_text") or "")
     st.session_state.product_name_input = str(entry.get("product_name") or "")
+    st.session_state.tiktok_product_url_input = str(entry.get("tiktok_product_url") or "")
+    st.session_state.scraped_product = entry.get("scraped_product") or {}
+    scraped_images = (st.session_state.scraped_product or {}).get("images") or []
+    st.session_state.selected_product_image_urls = entry.get("selected_product_image_urls") or scraped_images[:8]
+    st.session_state.product_image_facts = str(entry.get("product_image_facts") or "")
     st.session_state.product_details_input = str(entry.get("product_details") or "")
     architecture = str(entry.get("architecture_choice") or "Auto Detect")
     st.session_state.architecture_choice_input = architecture if architecture in ARCHITECTURE_OPTIONS else "Auto Detect"
     st.session_state.viral_transcript_input = str(entry.get("viral_transcript") or "")
     st.session_state.on_screen_text_input = str(entry.get("on_screen_text") or "")
     st.session_state.visual_cues_input = str(entry.get("visual_cues") or "")
-    st.session_state.tiktok_product_url_input = str(entry.get("tiktok_product_url") or "")
-    st.session_state.scraped_product = entry.get("scraped_product") or {}
-    st.session_state.scraped_image_analysis = entry.get("scraped_image_analysis") or {}
-    st.session_state.scraped_image_urls = entry.get("scraped_image_urls") or []
     st.session_state.script_editor = script
     st.session_state.product_facts = entry.get("product_facts") or {}
     st.session_state.script_verification = entry.get("script_verification") or {}
@@ -520,15 +516,15 @@ def build_saved_entry() -> dict[str, Any]:
         "id": st.session_state.get("loaded_script_id", ""),
         "title": (st.session_state.get("save_script_title") or st.session_state.get("product_name_input") or "Saved Script").strip(),
         "product_name": st.session_state.get("product_name_input", ""),
+        "tiktok_product_url": st.session_state.get("tiktok_product_url_input", ""),
+        "scraped_product": st.session_state.get("scraped_product", {}),
+        "selected_product_image_urls": st.session_state.get("selected_product_image_urls", []),
+        "product_image_facts": st.session_state.get("product_image_facts", ""),
         "product_details": st.session_state.get("product_details_input", ""),
         "architecture_choice": st.session_state.get("architecture_choice_input", "Auto Detect"),
         "viral_transcript": st.session_state.get("viral_transcript_input", ""),
         "on_screen_text": st.session_state.get("on_screen_text_input", ""),
         "visual_cues": st.session_state.get("visual_cues_input", ""),
-        "tiktok_product_url": st.session_state.get("tiktok_product_url_input", ""),
-        "scraped_product": st.session_state.get("scraped_product", {}),
-        "scraped_image_analysis": st.session_state.get("scraped_image_analysis", {}),
-        "scraped_image_urls": st.session_state.get("scraped_image_urls", []),
         "script_text": script,
         "product_facts": st.session_state.get("product_facts", {}),
         "script_verification": st.session_state.get("script_verification", {}),
@@ -557,7 +553,7 @@ HF_TOKEN = secret("HF_TOKEN")
 SOCIAVAULT_API_KEY = secret("SOCIAVAULT_API_KEY")
 SCRIPT_MODEL = secret("OPENAI_MODEL_SCRIPT", "gpt-5.4-mini")
 COMPLIANCE_MODEL = secret("OPENAI_MODEL_COMPLIANCE", "gpt-5.4-mini")
-VISION_MODEL = secret("OPENAI_MODEL_VISION", SCRIPT_MODEL)
+IMAGE_MODEL = secret("OPENAI_MODEL_IMAGE", SCRIPT_MODEL)
 ELEVEN_MODEL = secret("ELEVENLABS_MODEL", "eleven_multilingual_v2")
 LIBRARY_GITHUB_TOKEN = secret("SCRIPT_LIBRARY_GITHUB_TOKEN")
 LIBRARY_GITHUB_REPO = secret("SCRIPT_LIBRARY_GITHUB_REPO")
@@ -576,6 +572,9 @@ defaults: dict[str, Any] = {
     "visual_cues_input": "",
     "save_script_title": "",
     "tiktok_product_url_input": "",
+    "scraped_product": {},
+    "selected_product_image_urls": [],
+    "product_image_facts": "",
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -587,9 +586,9 @@ st.markdown(
     """
 <div class="hero">
   <h1>AI Skeleton Voiceover Generator</h1>
-  <p>Paste a TikTok Shop URL or enter product details manually. The app reads the listing and product photos, writes the Script DNA voiceover, audits it for TikTok Shop compliance, saves scripts, then creates and cleans the ElevenLabs audio.</p>
+  <p>Paste a TikTok Shop URL or enter the product manually. The app pulls the listing details, writes the Script DNA voiceover, audits it for TikTok Shop compliance, lets you save and recall scripts, then creates and cleans the ElevenLabs audio.</p>
   <div class="quick-flow">
-    <span>1 · Fetch product or paste details</span>
+    <span>1 · Fetch or paste product</span>
     <span>2 · Review compliance</span>
     <span>3 · Save / recall scripts</span>
     <span>4 · Generate clean MP3</span>
@@ -702,97 +701,88 @@ render_step(1, "Product + voice setup")
 left, right = st.columns([1.45, 0.75], gap="large")
 
 with left:
-    st.markdown("#### TikTok Shop product fetch")
-    fetch_url_col, fetch_btn_col = st.columns([1.45, 0.55], gap="small")
-    with fetch_url_col:
+    st.markdown("#### TikTok Shop URL — optional")
+    url_col, fetch_col = st.columns([1.45, 0.55], gap="small")
+    with url_col:
         tiktok_product_url = st.text_input(
             "TikTok Shop product URL",
             key="tiktok_product_url_input",
             placeholder="https://www.tiktok.com/shop/pdp/... or https://www.tiktok.com/view/product/...",
-            help="Optional. Paste a US TikTok Shop product URL and SociaVault will fill the product details and read the listing photos for benefit text.",
+            label_visibility="collapsed",
         )
-    with fetch_btn_col:
-        st.markdown("<div style='height:1.78rem'></div>", unsafe_allow_html=True)
-        fetch_clicked = st.button(
+    with fetch_col:
+        fetch_product = st.button(
             "Fetch Product",
             type="primary",
             use_container_width=True,
             disabled=not (SOCIAVAULT_API_KEY and tiktok_product_url.strip()),
         )
-
     if not SOCIAVAULT_API_KEY:
-        st.caption("Add SOCIAVAULT_API_KEY to Streamlit Secrets to enable one-click TikTok Shop fetching.")
+        st.caption("SociaVault is not configured yet. Manual product entry still works.")
+    else:
+        st.caption("Fetches the current TikTok Shop listing with SociaVault. One product lookup uses one SociaVault credit.")
 
-    if fetch_clicked:
+    if fetch_product:
         try:
-            fetch_status = st.status("Fetching TikTok Shop product…", expanded=True)
-            fetch_status.write("Pulling the listing from SociaVault…")
-            raw_product = fetch_product(SOCIAVAULT_API_KEY, tiktok_product_url, region="US")
-            normalized = normalize_product(raw_product, tiktok_product_url)
-            if not normalized.get("title"):
-                raise SociaVaultError("The TikTok Shop listing did not return a product title.")
-
-            image_analysis = {}
-            image_warning = ""
-            image_urls = normalized.get("image_urls") or []
-            if image_urls and OPENAI_API_KEY:
-                fetch_status.write(f"Reading up to {min(len(image_urls), 12)} product photos for benefits, ingredients, directions, and differentiators…")
-                try:
-                    image_analysis = analyze_product_images(
-                        OPENAI_API_KEY,
-                        VISION_MODEL,
-                        normalized.get("title") or "TikTok Shop product",
-                        image_urls,
-                        max_images=12,
-                    )
-                except Exception as image_exc:
-                    image_warning = f"Product listing fetched, but photo analysis could not finish: {image_exc}"
-            elif image_urls and not OPENAI_API_KEY:
-                image_warning = "Product listing fetched, but OPENAI_API_KEY is required to read text from the product photos."
-
-            st.session_state.product_name_input = normalized.get("title") or ""
-            st.session_state.product_details_input = build_product_details(normalized, image_analysis)
-            st.session_state.scraped_product = normalized
-            st.session_state.scraped_image_analysis = image_analysis
-            st.session_state.scraped_image_urls = image_urls
-            st.session_state.scrape_warning = image_warning
+            with st.spinner("Fetching TikTok Shop product details…"):
+                scraped = fetch_tiktok_shop_product(
+                    SOCIAVAULT_API_KEY,
+                    tiktok_product_url,
+                    region="US",
+                    get_related_videos=False,
+                )
             reset_output(clear_loaded_id=True)
-            # reset_output does not remove the scraped fields or product widget values.
-            fetch_status.update(label="TikTok Shop product ready", state="complete", expanded=False)
+            st.session_state.tiktok_product_url_input = tiktok_product_url.strip()
+            st.session_state.scraped_product = scraped
+            st.session_state.selected_product_image_urls = (scraped.get("images") or [])[:8]
+            st.session_state.product_image_facts = ""
+            st.session_state.product_name_input = scraped.get("title", "")
+            st.session_state.product_details_input = scraped.get("script_details", "")
+            st.session_state.save_script_title = scraped.get("title", "")
             st.rerun()
-        except Exception as exc:
-            st.error(f"Product fetch failed: {exc}")
+        except SociaVaultError as exc:
+            st.error(str(exc))
+        except Exception:
+            st.error("TikTok Shop lookup failed. Try again in a moment.")
 
-    scraped_images = st.session_state.get("scraped_image_urls") or []
-    if scraped_images:
-        st.success(f"TikTok Shop product loaded · {len(scraped_images)} listing images found")
-        if st.session_state.get("scrape_warning"):
-            st.warning(st.session_state.scrape_warning)
-        with st.expander("Product photos + text found on them", expanded=True):
-            preview = scraped_images[:8]
-            if preview:
-                cols = st.columns(min(4, len(preview)))
-                for i, url in enumerate(preview):
-                    with cols[i % len(cols)]:
-                        st.image(url, use_container_width=True)
-            analysis = st.session_state.get("scraped_image_analysis") or {}
-            analyzed = int(analysis.get("images_analyzed") or 0)
-            if analyzed:
-                st.caption(f"AI read {analyzed} product images. Price and stock are ignored by design.")
-            useful = {
-                "Benefits written on photos": analysis.get("visible_benefits") or [],
-                "Ingredients/components": analysis.get("ingredients") or [],
-                "Usage/directions": analysis.get("directions") or [],
-                "Differentiators": analysis.get("differentiators") or [],
-                "Warnings/limitations": analysis.get("warnings") or [],
-            }
-            for heading, values in useful.items():
-                if values:
-                    st.markdown(f"**{heading}**")
-                    for value in values:
-                        st.markdown(f"- {value}")
+    scraped = st.session_state.get("scraped_product") or {}
+    if scraped:
+        st.success("TikTok Shop listing loaded. Product name and stable listing facts were filled automatically.")
+        info_cols = st.columns(4)
+        info_cols[0].metric("Seller", str(scraped.get("seller_name") or "—")[:30])
+        info_cols[1].metric("Sold", f"{int(scraped.get('sold_count')):,}" if isinstance(scraped.get("sold_count"), (int, float)) else "—")
+        info_cols[2].metric("Rating", str(scraped.get("rating") or "—"))
+        info_cols[3].metric("Reviews", f"{int(scraped.get('review_count')):,}" if isinstance(scraped.get("review_count"), (int, float)) else "—")
 
-    st.markdown("#### Product information used for Script DNA")
+        image_urls = (scraped.get("images") or [])[:8]
+        if image_urls:
+            st.markdown("#### Select product photos for AI to read")
+            st.caption("All listing photos are selected by default. Uncheck any photo you do not want used for Script DNA. The AI reads visible benefit text, ingredients, directions, differentiators, warnings, and other labeled product facts — never price or stock.")
+            selected_before = set(st.session_state.get("selected_product_image_urls") or image_urls)
+            selected_now: list[str] = []
+            safe_pid = re.sub(r"[^A-Za-z0-9]+", "_", str(scraped.get("product_id") or "product"))
+            image_cols = st.columns(min(4, len(image_urls)))
+            for idx, image_url in enumerate(image_urls):
+                with image_cols[idx % len(image_cols)]:
+                    st.image(image_url, use_container_width=True)
+                    photo_key = f"use_product_photo_{safe_pid}_{idx}"
+                    if photo_key not in st.session_state:
+                        st.session_state[photo_key] = image_url in selected_before
+                    use_photo = st.checkbox(
+                        f"Use photo {idx + 1}",
+                        key=photo_key,
+                        help="Checked photos will be read by the AI before Script DNA is written.",
+                    )
+                    if use_photo:
+                        selected_now.append(image_url)
+            st.session_state.selected_product_image_urls = selected_now
+            st.caption(f"{len(selected_now)} of {len(image_urls)} product photos selected for AI reading.")
+
+            image_facts_preview = str(st.session_state.get("product_image_facts") or "").strip()
+            if image_facts_preview:
+                with st.expander("What the AI extracted from the selected product photos", expanded=False):
+                    st.text(image_facts_preview)
+
     product_name = st.text_input(
         "Product name",
         key="product_name_input",
@@ -802,7 +792,7 @@ with left:
         "Product details",
         key="product_details_input",
         height=300,
-        placeholder="Paste listing details manually, or use Fetch Product above. Product-photo text will be added here automatically. Price and stock are excluded.",
+        placeholder="Paste the listing details, ingredients/features, benefits, directions, disclaimers, offer details, etc.",
     )
     architecture_choice = st.selectbox(
         "Script style",
@@ -882,8 +872,21 @@ if generate_clicked:
     st.session_state.save_script_title = product_name.strip()
     try:
         progress = st.status("Building Script DNA voiceover…", expanded=True)
-        progress.write("Extracting only supported product facts from the listing details and product-photo text…")
-        facts = extract_product_facts(OPENAI_API_KEY, SCRIPT_MODEL, product_name, product_details)
+        selected_images = list(st.session_state.get("selected_product_image_urls") or [])
+        image_facts = ""
+        if selected_images:
+            progress.write(f"Reading {len(selected_images)} selected product photo(s) for visible benefits, ingredients, directions, and differentiators…")
+            image_facts = analyze_product_images(OPENAI_API_KEY, IMAGE_MODEL, selected_images)
+            st.session_state.product_image_facts = image_facts
+        else:
+            st.session_state.product_image_facts = ""
+
+        grounded_details = product_details.strip()
+        if image_facts.strip():
+            grounded_details += "\n\nOFFICIAL TIKTOK SHOP PRODUCT IMAGE FACTS (read only from selected listing photos; price/stock/testimonial claims excluded):\n" + image_facts.strip()
+
+        progress.write("Extracting only the product facts supplied in the listing and selected product photos…")
+        facts = extract_product_facts(OPENAI_API_KEY, SCRIPT_MODEL, product_name, grounded_details)
         st.session_state.product_facts = facts
 
         progress.write("Writing the Skeleton / Script DNA script…")
@@ -891,7 +894,7 @@ if generate_clicked:
             OPENAI_API_KEY,
             SCRIPT_MODEL,
             product_name,
-            product_details,
+            grounded_details,
             facts,
             architecture_choice,
             viral_transcript,

@@ -9,7 +9,7 @@ from typing import Any
 
 import streamlit as st
 
-from services.compliance import apply_selected_rewrites, audit_script, parse_rewrite_suggestions
+from services.compliance import apply_selected_rewrites, audit_script, parse_final_summary, parse_rewrite_suggestions
 from services.elevenlabs import synthesize
 from services.llm import LLMError, analyze_product_images
 from services.script_engine import extract_product_facts, generate_script
@@ -124,12 +124,12 @@ html, body, [data-testid="stAppViewContainer"] {
 .hero {
     border: 1px solid var(--line);
     border-radius: 22px;
-    padding: 1.5rem 1.6rem;
-    margin-bottom: 1.1rem;
+    padding: 1.05rem 1.2rem;
+    margin-bottom: .8rem;
     background: linear-gradient(135deg, rgba(113,140,255,.16), rgba(255,255,255,.035));
 }
 .hero h1 {
-    font-size: clamp(2.15rem, 4vw, 3.35rem);
+    font-size: clamp(1.85rem, 3.4vw, 2.75rem);
     line-height: 1.03;
     letter-spacing: -0.045em;
     margin: 0;
@@ -137,26 +137,26 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 .hero p {
     color: #d0d6df;
-    font-size: 1.14rem;
-    line-height: 1.58;
-    margin: .72rem 0 0 0;
+    font-size: 1.01rem;
+    line-height: 1.48;
+    margin: .45rem 0 0 0;
     max-width: 980px;
 }
 .quick-flow {
     display: flex;
     gap: .65rem;
     flex-wrap: wrap;
-    margin-top: 1rem;
+    margin-top: .65rem;
 }
 .quick-flow span {
     display: inline-block;
-    padding: .54rem .82rem;
+    padding: .4rem .65rem;
     border: 1px solid #45516a;
     background: #182132;
     border-radius: 999px;
     color: #f2f5fa;
     font-weight: 750;
-    font-size: .95rem;
+    font-size: .86rem;
 }
 .step-heading {
     display:flex;
@@ -185,8 +185,8 @@ html, body, [data-testid="stAppViewContainer"] {
     border: 1px solid #374357;
     border-radius: 18px;
     background: linear-gradient(180deg, #192131, #111722);
-    padding: 1rem 1.05rem;
-    margin: .55rem 0 .75rem 0;
+    padding: .75rem .9rem;
+    margin: .4rem 0 .55rem 0;
 }
 .voice-name { font-size:1.27rem; font-weight:850; color:#fff; }
 .voice-desc { color:#c3cbd7; margin-top:.15rem; font-size:1rem; }
@@ -320,6 +320,35 @@ hr { border-color:#2b3444 !important; }
     .block-container { padding-left: 1rem; padding-right: 1rem; }
     .voice-settings { grid-template-columns: 1fr 1fr; }
 }
+
+/* Compact workbench */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    gap: .35rem;
+    background: #0d131d;
+    border: 1px solid #2e394b;
+    border-radius: 14px;
+    padding: .28rem;
+}
+[data-testid="stTabs"] button[role="tab"] {
+    min-height: 44px;
+    border-radius: 10px;
+    font-weight: 800;
+    padding: .45rem .8rem;
+}
+[data-testid="stTabs"] button[aria-selected="true"] {
+    background: #202b3c;
+}
+[data-testid="stDataEditor"] {
+    border: 1px solid #354055;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.compact-note {
+    color:#b9c2d0;
+    font-size:.94rem;
+    margin:-.25rem 0 .65rem 0;
+}
+
 </style>
 """,
     unsafe_allow_html=True,
@@ -441,16 +470,8 @@ def render_voice_card(name: str) -> None:
     st.markdown(
         f"""
 <div class="voice-card">
-  <div class="voice-name">{name}</div>
-  <div class="voice-desc">{preset['description']}</div>
-  <div class="voice-settings">
-    <div class="voice-setting"><span>Speed</span><b>{speed:.2f}</b></div>
-    <div class="voice-setting"><span>Stability</span><b>{stability:.0%}</b></div>
-    <div class="voice-setting"><span>Similarity</span><b>{similarity:.0%}</b></div>
-    <div class="voice-setting"><span>Style</span><b>{style:.0%}</b></div>
-    <div class="voice-setting"><span>Speaker boost</span><b>{'On' if speaker else 'Off'}</b></div>
-    <div class="voice-setting"><span>Silence kept</span><b>{st.session_state.get('keep_silence', 0.03):.2f}s</b></div>
-  </div>
+  <div class="voice-name">{name} <span style="font-size:.88rem;color:#aeb8c8;font-weight:650">· {preset['description']}</span></div>
+  <div class="voice-desc" style="margin-top:.55rem">Speed <b>{speed:.2f}</b> &nbsp;·&nbsp; Stability <b>{stability:.0%}</b> &nbsp;·&nbsp; Similarity <b>{similarity:.0%}</b> &nbsp;·&nbsp; Style <b>{style:.0%}</b> &nbsp;·&nbsp; Boost <b>{'On' if speaker else 'Off'}</b></div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -599,13 +620,9 @@ st.markdown(
     """
 <div class="hero">
   <h1>AI Skeleton Voiceover Generator</h1>
-  <p>Paste a TikTok Shop URL or enter the product manually. The app pulls the listing details, writes the Script DNA voiceover, audits it for TikTok Shop compliance, lets you save and recall scripts, then creates and cleans the ElevenLabs audio.</p>
+  <p>Fetch the product, write the script, approve compliance, and create the voiceover.</p>
   <div class="quick-flow">
-    <span>1 · Fetch or paste product</span>
-    <span>2 · Review compliance</span>
-    <span>3 · Save / recall scripts</span>
-    <span>4 · Generate clean MP3</span>
-    <span>AI · GPT-5.6 Sol</span>
+    <span>Product</span><span>Script</span><span>Compliance</span><span>Voiceover</span><span>GPT-5.6 Sol</span>
   </div>
 </div>
 """,
@@ -764,41 +781,33 @@ with left:
 
     scraped = st.session_state.get("scraped_product") or {}
     if scraped:
-        st.success("TikTok Shop listing loaded. Product name and stable listing facts were filled automatically.")
-        info_cols = st.columns(4)
-        info_cols[0].metric("Seller", str(scraped.get("seller_name") or "—")[:30])
-        info_cols[1].metric("Sold", f"{int(scraped.get('sold_count')):,}" if isinstance(scraped.get("sold_count"), (int, float)) else "—")
-        info_cols[2].metric("Rating", str(scraped.get("rating") or "—"))
-        info_cols[3].metric("Reviews", f"{int(scraped.get('review_count')):,}" if isinstance(scraped.get("review_count"), (int, float)) else "—")
-
         image_urls = (scraped.get("images") or [])[:12]
-        if image_urls:
-            st.markdown("#### Select product photos for AI to read")
-            st.caption("No photos are selected automatically. Check only the listing photos you want GPT-5.6 Sol to read for visible benefits, ingredients, directions, differentiators, warnings, and other labeled product facts. Price and stock are ignored.")
-            selected_before = set(st.session_state.get("selected_product_image_urls") or [])
-            selected_now: list[str] = []
-            safe_pid = re.sub(r"[^A-Za-z0-9]+", "_", str(scraped.get("product_id") or "product"))
-            image_cols = st.columns(min(4, len(image_urls)))
-            for idx, image_url in enumerate(image_urls):
-                with image_cols[idx % len(image_cols)]:
-                    st.image(image_url, use_container_width=True)
-                    photo_key = f"use_product_photo_{safe_pid}_{idx}"
-                    if photo_key not in st.session_state:
-                        st.session_state[photo_key] = image_url in selected_before
-                    use_photo = st.checkbox(
-                        f"Use photo {idx + 1}",
-                        key=photo_key,
-                        help="Checked photos will be read by the AI before Script DNA is written.",
-                    )
-                    if use_photo:
-                        selected_now.append(image_url)
-            st.session_state.selected_product_image_urls = selected_now
-            st.caption(f"{len(selected_now)} of {len(image_urls)} product photos selected for AI reading.")
+        seller_label = str(scraped.get("seller_name") or "TikTok Shop")
+        st.success(f"Product loaded from {seller_label}. {len(image_urls)} listing photo(s) available.")
 
-            image_facts_preview = str(st.session_state.get("product_image_facts") or "").strip()
-            if image_facts_preview:
-                with st.expander("What the AI extracted from the selected product photos", expanded=False):
-                    st.text(image_facts_preview)
+        if image_urls:
+            with st.expander(f"🖼️ Choose product photos ({len(image_urls)} available)", expanded=False):
+                st.caption("Nothing is selected automatically. Check only the photos you want GPT-5.6 Sol to read. Price and stock are ignored.")
+                selected_before = set(st.session_state.get("selected_product_image_urls") or [])
+                selected_now: list[str] = []
+                safe_pid = re.sub(r"[^A-Za-z0-9]+", "_", str(scraped.get("product_id") or "product"))
+                image_cols = st.columns(min(4, len(image_urls)))
+                for idx, image_url in enumerate(image_urls):
+                    with image_cols[idx % len(image_cols)]:
+                        st.image(image_url, use_container_width=True)
+                        photo_key = f"use_product_photo_{safe_pid}_{idx}"
+                        if photo_key not in st.session_state:
+                            st.session_state[photo_key] = image_url in selected_before
+                        use_photo = st.checkbox(f"Use photo {idx + 1}", key=photo_key)
+                        if use_photo:
+                            selected_now.append(image_url)
+                st.session_state.selected_product_image_urls = selected_now
+                st.caption(f"Selected: {len(selected_now)} of {len(image_urls)}")
+
+                image_facts_preview = str(st.session_state.get("product_image_facts") or "").strip()
+                if image_facts_preview:
+                    with st.expander("AI text extracted from selected photos", expanded=False):
+                        st.text(image_facts_preview)
 
     product_name = st.text_input(
         "Product name",
@@ -808,7 +817,7 @@ with left:
     product_details = st.text_area(
         "Product details",
         key="product_details_input",
-        height=300,
+        height=220,
         placeholder="Paste the listing details, ingredients/features, benefits, directions, disclaimers, offer details, etc.",
     )
     architecture_choice = st.selectbox(
@@ -946,19 +955,9 @@ if should_generate:
 
 if "script_editor" in st.session_state:
     st.divider()
-    render_step(2, "Review script + compliance")
+    render_step(2, "Script workbench")
 
     verification = st.session_state.get("script_verification", {})
-    if verification:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Words", verification.get("word_count", "—"))
-        c2.metric("Architecture", verification.get("architecture", "—"))
-        c3.metric("Script DNA", "PASS" if verification.get("pass") else "Needs attention")
-        if verification.get("style_issues"):
-            with st.expander("Why Script DNA still needs attention", expanded=False):
-                for issue in verification.get("style_issues") or []:
-                    st.write(f"• {issue}")
-
     rating = st.session_state.get("compliance_rating", "UNKNOWN")
     report = st.session_state.get("compliance_report", "")
     current_hash = script_hash(st.session_state.script_editor)
@@ -966,54 +965,63 @@ if "script_editor" in st.session_state:
     bypass_hash = st.session_state.get("compliance_bypass_hash")
     current_pass = rating == "PASS" and compliance_hash == current_hash
     current_bypass = bypass_hash == current_hash
+    current_approved = current_pass or current_bypass
+    short_verdict = parse_final_summary(report)
 
     if current_bypass:
-        reason = st.session_state.get("compliance_bypass_reason", "Manually reviewed")
         st.markdown(
-            f'<div class="status-box status-override">🟣 MANUAL OVERRIDE — voiceover is enabled for this exact script. Reason: {reason}</div>',
+            '<div class="status-box status-override">🟣 MANUAL OVERRIDE — voiceover enabled for this exact script.</div>',
             unsafe_allow_html=True,
         )
     elif current_pass:
         st.markdown(
-            '<div class="status-box status-pass">🟢 PASS — this exact script is cleared for voiceover.</div>',
+            '<div class="status-box status-pass">🟢 PASS — ready for voiceover.</div>',
             unsafe_allow_html=True,
         )
     elif rating == "NEEDS REVISION":
         st.markdown(
-            '<div class="status-box status-warn">🟡 NEEDS REVISION — review the flag below. You can edit/recheck or manually override a known false positive.</div>',
+            '<div class="status-box status-warn">🟡 NEEDS REVISION — open the Compliance tab to choose fixes.</div>',
             unsafe_allow_html=True,
         )
     elif rating == "HIGH RISK":
         st.markdown(
-            '<div class="status-box status-risk">🔴 HIGH RISK — review the report before continuing. Manual override is available only when you have personally reviewed the flag.</div>',
+            '<div class="status-box status-risk">🔴 HIGH RISK — review the Compliance tab before continuing.</div>',
             unsafe_allow_html=True,
         )
     else:
-        st.warning("Compliance rating could not be parsed. Review the report, recheck, or manually approve the exact script if appropriate.")
+        st.warning("Compliance result needs review. Open the Compliance tab.")
 
-    script_col, audit_col = st.columns([1.2, 0.8], gap="large")
-    with script_col:
+    script_tab, compliance_tab, save_tab, voice_tab = st.tabs(
+        ["✍️ Script", "🛡️ Compliance", "💾 Save", "🎙️ Voiceover"]
+    )
+
+    with script_tab:
+        if verification:
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Words", verification.get("word_count", "—"))
+            m2.metric("Architecture", verification.get("architecture", "—"))
+            m3.metric("Script DNA", "PASS" if verification.get("pass") else "Needs attention")
+
         st.text_area(
-            "Final script — editable",
+            "Final script",
             key="script_editor",
-            height=420,
-            help="Editing the script invalidates the prior green check or manual override until the exact new text is rechecked/approved.",
+            height=390,
+            help="Any edit invalidates the prior compliance approval until the exact edited script is rechecked or manually approved.",
         )
-        st.selectbox(
-            "Regenerate angle",
-            REGENERATION_ANGLES,
-            key="regeneration_angle_select",
-            help="Choose how different you want the next draft to feel. Regeneration reuses the current product data and selected photos and does not call SociaVault again.",
-        )
-        action_left, action_right = st.columns(2)
-        with action_left:
-            regenerate = st.button(
-                "Regenerate Script",
-                type="primary",
-                use_container_width=True,
-                help="Writes a fresh take from the same product details and currently selected photos. SociaVault is not fetched again.",
+
+        control_left, control_mid, control_right = st.columns([1.15, 1, 1])
+        with control_left:
+            st.selectbox(
+                "Regenerate angle",
+                REGENERATION_ANGLES,
+                key="regeneration_angle_select",
+                help="Uses the current product data and selected photos. SociaVault is not called again.",
             )
-        with action_right:
+        with control_mid:
+            st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
+            regenerate = st.button("Regenerate Script", type="primary", use_container_width=True)
+        with control_right:
+            st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
             recheck = st.button("Recheck Edited Script", use_container_width=True)
 
         if regenerate:
@@ -1041,92 +1049,71 @@ if "script_editor" in st.session_state:
             except Exception as exc:
                 st.error(f"Compliance check failed: {exc}")
 
-        st.markdown("#### Save this script")
-        st.text_input(
-            "Saved script name",
-            key="save_script_title",
-            placeholder="Name this script so it is easy to find later",
-        )
-        save_update_col, save_new_col = st.columns(2)
-        with save_update_col:
-            save_label = "Update Saved Script" if st.session_state.get("loaded_script_id") else "Save Script"
-            if st.button(save_label, use_container_width=True):
-                try:
-                    saved, mode = upsert_script(
-                        build_saved_entry(),
-                        LOCAL_LIBRARY_PATH,
-                        LIBRARY_GITHUB_TOKEN,
-                        LIBRARY_GITHUB_REPO,
-                        LIBRARY_GITHUB_PATH,
-                        force_new=False,
-                    )
-                    st.session_state.loaded_script_id = saved["id"]
-                    cached_load_library.clear()
-                    if mode == "github":
-                        st.success("Script saved permanently to the GitHub library.")
-                    else:
-                        st.success("Script saved to the app library.")
-                    st.rerun()
-                except ScriptLibraryError as exc:
-                    st.error(str(exc))
-        with save_new_col:
-            if st.button("Save as New Copy", use_container_width=True):
-                try:
-                    entry = build_saved_entry()
-                    entry["id"] = ""
-                    saved, mode = upsert_script(
-                        entry,
-                        LOCAL_LIBRARY_PATH,
-                        LIBRARY_GITHUB_TOKEN,
-                        LIBRARY_GITHUB_REPO,
-                        LIBRARY_GITHUB_PATH,
-                        force_new=True,
-                    )
-                    st.session_state.loaded_script_id = saved["id"]
-                    cached_load_library.clear()
-                    st.success("New saved copy created.")
-                    st.rerun()
-                except ScriptLibraryError as exc:
-                    st.error(str(exc))
+        if verification.get("style_issues"):
+            with st.expander("Script DNA notes", expanded=False):
+                for issue in verification.get("style_issues") or []:
+                    st.write(f"• {issue}")
+        with st.expander("Extracted product facts", expanded=False):
+            st.json(st.session_state.get("product_facts", {}))
 
-    with audit_col:
-        with st.expander("Compliance report", expanded=not current_pass):
-            st.markdown(report or "No compliance report available.")
-            if report:
-                st.download_button(
-                    "Download compliance report",
-                    data=report.encode("utf-8"),
-                    file_name=f"{safe_filename(st.session_state.get('product_name_input', 'product'))}_compliance.txt",
-                    mime="text/plain",
-                    use_container_width=True,
-                )
-
+    with compliance_tab:
+        # Recompute after the editable script widget above.
+        current_hash = script_hash(st.session_state.script_editor)
+        compliance_hash = st.session_state.get("compliance_script_hash")
+        bypass_hash = st.session_state.get("compliance_bypass_hash")
+        rating = st.session_state.get("compliance_rating", "UNKNOWN")
+        report = st.session_state.get("compliance_report", "")
+        current_pass = rating == "PASS" and compliance_hash == current_hash
+        current_bypass = bypass_hash == current_hash
         rewrite_suggestions = parse_rewrite_suggestions(report) if (report and compliance_hash == current_hash) else []
-        if rewrite_suggestions and not current_pass:
-            with st.expander("Choose which compliance fixes to apply", expanded=True):
-                st.caption(
-                    "Each rewrite is optional. Check only the changes you want, then the app will apply those selected fixes and automatically run compliance again on the exact updated script."
-                )
-                selected_rewrites = []
+        short_verdict = parse_final_summary(report)
+
+        if short_verdict:
+            st.markdown(f"**Auditor verdict:** {short_verdict}")
+
+        if current_pass:
+            st.success("No action needed. This exact script passed compliance.")
+        elif current_bypass:
+            reason = st.session_state.get("compliance_bypass_reason", "Manually reviewed")
+            st.info(f"Manual approval is active for this exact script. Reason: {reason}")
+        else:
+            if compliance_hash != current_hash:
+                st.warning("The script changed after the last audit. Recheck it from the Script tab before relying on these results.")
+            elif rewrite_suggestions:
+                st.markdown(f"### {len(rewrite_suggestions)} suggested fix{'es' if len(rewrite_suggestions) != 1 else ''}")
+                st.caption("Check only the rewrites you want. The full compliance report is hidden below unless you need it.")
                 report_token = hashlib.sha1(report.encode("utf-8")).hexdigest()[:10]
-                for idx, suggestion in enumerate(rewrite_suggestions, start=1):
-                    fix_key = f"compliance_fix_{report_token}_{idx}"
-                    use_fix = st.checkbox(f"Apply fix {idx}", key=fix_key)
-                    st.markdown(f"**Original:** {suggestion['original']}")
-                    st.markdown(f"**Suggested rewrite:** {suggestion['rewrite']}")
-                    if use_fix:
-                        selected_rewrites.append(suggestion)
-                    if idx != len(rewrite_suggestions):
-                        st.divider()
+                editor_data = {
+                    "Apply": [False] * len(rewrite_suggestions),
+                    "Flagged phrase": [item["original"] for item in rewrite_suggestions],
+                    "Suggested rewrite": [item["rewrite"] for item in rewrite_suggestions],
+                }
+                edited = st.data_editor(
+                    editor_data,
+                    key=f"compliance_fix_table_{report_token}",
+                    hide_index=True,
+                    use_container_width=True,
+                    height=min(330, 72 + 58 * len(rewrite_suggestions)),
+                    column_config={
+                        "Apply": st.column_config.CheckboxColumn("Apply", width="small", default=False),
+                        "Flagged phrase": st.column_config.TextColumn("Flagged phrase", width="medium"),
+                        "Suggested rewrite": st.column_config.TextColumn("Suggested rewrite", width="large"),
+                    },
+                    disabled=["Flagged phrase", "Suggested rewrite"],
+                )
+                apply_values = edited.get("Apply", []) if isinstance(edited, dict) else []
+                selected_rewrites = [
+                    item for item, should_apply in zip(rewrite_suggestions, apply_values) if should_apply
+                ]
 
                 if st.button(
-                    "Apply Selected Fixes + Recheck",
+                    f"Apply {len(selected_rewrites)} Selected Fix{'es' if len(selected_rewrites) != 1 else ''} + Recheck",
                     type="primary",
                     use_container_width=True,
                     disabled=not selected_rewrites,
                 ):
                     try:
-                        with st.spinner("Applying only your selected compliance fixes and rechecking…"):
+                        with st.spinner("Applying the selected fixes and rechecking…"):
                             revised_script = apply_selected_rewrites(
                                 OPENAI_API_KEY,
                                 COMPLIANCE_MODEL,
@@ -1151,69 +1138,125 @@ if "script_editor" in st.session_state:
                         st.rerun()
                     except Exception as exc:
                         st.error(f"Could not apply/recheck the selected fixes: {exc}")
+            else:
+                st.info("No selectable rewrite suggestions were returned. Use the full report below only if you need more detail.")
 
-        with st.expander("Manual compliance override", expanded=(not current_pass and not current_bypass)):
-            st.warning(
-                "Use this only after you personally review the flag. The override applies to the exact current script only. "
-                "If the script changes, the override automatically stops working."
-            )
-            override_reason = st.selectbox(
-                "Reason for override",
-                [
-                    "Known-safe TikTok orange-cart CTA false positive",
-                    "Reviewed manually — flag does not apply",
-                    "Other reviewed false positive",
-                ],
-                key="override_reason_select",
-            )
-            override_ack = st.checkbox(
-                "I reviewed the compliance report and approve this exact script for voiceover.",
-                key="override_ack",
-            )
-            if st.button(
-                "Approve This Script for Voiceover",
-                use_container_width=True,
-                disabled=not override_ack,
-            ):
-                st.session_state.compliance_bypass_hash = script_hash(st.session_state.script_editor)
-                st.session_state.compliance_bypass_reason = override_reason
-                for key in ["raw_audio", "clean_audio", "audio_meta", "audio_script_hash"]:
-                    st.session_state.pop(key, None)
-                st.rerun()
-            if current_bypass and st.button("Remove Manual Override", use_container_width=True):
-                st.session_state.pop("compliance_bypass_hash", None)
-                st.session_state.pop("compliance_bypass_reason", None)
-                st.rerun()
+        override_left, report_right = st.columns(2)
+        with override_left:
+            if not current_pass:
+                with st.expander("Manual override", expanded=False):
+                    st.warning("Use only after personally reviewing the flag. Approval applies only to the exact current script.")
+                    override_reason = st.selectbox(
+                        "Reason",
+                        [
+                            "Known-safe TikTok orange-cart CTA false positive",
+                            "Reviewed manually — flag does not apply",
+                            "Other reviewed false positive",
+                        ],
+                        key="override_reason_select",
+                    )
+                    override_ack = st.checkbox(
+                        "I reviewed this script and approve it for voiceover.",
+                        key="override_ack",
+                    )
+                    if st.button(
+                        "Approve Exact Script",
+                        use_container_width=True,
+                        disabled=not override_ack,
+                    ):
+                        st.session_state.compliance_bypass_hash = script_hash(st.session_state.script_editor)
+                        st.session_state.compliance_bypass_reason = override_reason
+                        for key in ["raw_audio", "clean_audio", "audio_meta", "audio_script_hash"]:
+                            st.session_state.pop(key, None)
+                        st.rerun()
+                    if current_bypass and st.button("Remove Override", use_container_width=True):
+                        st.session_state.pop("compliance_bypass_hash", None)
+                        st.session_state.pop("compliance_bypass_reason", None)
+                        st.rerun()
+        with report_right:
+            with st.expander("Full auditor report", expanded=False):
+                st.markdown(report or "No compliance report available.")
+                if report:
+                    st.download_button(
+                        "Download Full Report",
+                        data=report.encode("utf-8"),
+                        file_name=f"{safe_filename(st.session_state.get('product_name_input', 'product'))}_compliance.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                    )
 
-        with st.expander("Extracted product facts"):
-            st.json(st.session_state.get("product_facts", {}))
+    with save_tab:
+        st.markdown("### Save for later")
+        st.caption("Save the current script, product setup, selected photos, voice, and current compliance result.")
+        st.text_input(
+            "Saved script name",
+            key="save_script_title",
+            placeholder="Name this script so it is easy to find later",
+        )
+        save_update_col, save_new_col = st.columns(2)
+        with save_update_col:
+            save_label = "Update Saved Script" if st.session_state.get("loaded_script_id") else "Save Script"
+            if st.button(save_label, type="primary", use_container_width=True):
+                try:
+                    saved, mode = upsert_script(
+                        build_saved_entry(),
+                        LOCAL_LIBRARY_PATH,
+                        LIBRARY_GITHUB_TOKEN,
+                        LIBRARY_GITHUB_REPO,
+                        LIBRARY_GITHUB_PATH,
+                        force_new=False,
+                    )
+                    st.session_state.loaded_script_id = saved["id"]
+                    cached_load_library.clear()
+                    st.success("Script saved permanently to GitHub." if mode == "github" else "Script saved to the app library.")
+                    st.rerun()
+                except ScriptLibraryError as exc:
+                    st.error(str(exc))
+        with save_new_col:
+            if st.button("Save as New Copy", use_container_width=True):
+                try:
+                    entry = build_saved_entry()
+                    entry["id"] = ""
+                    saved, _mode = upsert_script(
+                        entry,
+                        LOCAL_LIBRARY_PATH,
+                        LIBRARY_GITHUB_TOKEN,
+                        LIBRARY_GITHUB_REPO,
+                        LIBRARY_GITHUB_PATH,
+                        force_new=True,
+                    )
+                    st.session_state.loaded_script_id = saved["id"]
+                    cached_load_library.clear()
+                    st.success("New saved copy created.")
+                    st.rerun()
+                except ScriptLibraryError as exc:
+                    st.error(str(exc))
 
-    # Recompute because editing the text area can happen earlier in the same rerun.
-    current_hash = script_hash(st.session_state.script_editor)
-    compliance_hash = st.session_state.get("compliance_script_hash")
-    bypass_hash = st.session_state.get("compliance_bypass_hash")
-    audio_hash = st.session_state.get("audio_script_hash")
-    current_pass = st.session_state.get("compliance_rating") == "PASS" and compliance_hash == current_hash
-    current_bypass = bypass_hash == current_hash
-    current_approved = current_pass or current_bypass
+    with voice_tab:
+        # Recompute because the script may have been edited.
+        current_hash = script_hash(st.session_state.script_editor)
+        compliance_hash = st.session_state.get("compliance_script_hash")
+        bypass_hash = st.session_state.get("compliance_bypass_hash")
+        audio_hash = st.session_state.get("audio_script_hash")
+        current_pass = st.session_state.get("compliance_rating") == "PASS" and compliance_hash == current_hash
+        current_bypass = bypass_hash == current_hash
+        current_approved = current_pass or current_bypass
 
-    if st.session_state.get("compliance_rating") == "PASS" and compliance_hash != current_hash and not current_bypass:
-        st.warning("⚠️ The script was edited after the green check. Recheck it or manually approve the exact edited text before generating audio.")
-    if bypass_hash and bypass_hash != current_hash:
-        st.warning("⚠️ The script changed after the manual override. The override is no longer valid for the edited version.")
-
-    st.divider()
-    render_step(3, "Generate clean ElevenLabs audio")
-    voice_left, voice_right = st.columns([0.78, 1.22], gap="large")
-    with voice_left:
-        render_voice_card(selected_voice_name)
-    with voice_right:
-        if audio_hash and audio_hash != current_hash:
-            st.info("The script changed after the audio was created. Generate a new voiceover for the current script.")
-        if current_bypass:
-            st.caption("Manual override active for this exact script. Voiceover generation is enabled.")
+        if st.session_state.get("compliance_rating") == "PASS" and compliance_hash != current_hash and not current_bypass:
+            st.warning("The script was edited after its green check. Recheck it in the Script tab first.")
+        elif bypass_hash and bypass_hash != current_hash:
+            st.warning("The script changed after manual approval. Recheck it or approve the exact edited version again.")
+        elif current_bypass:
+            st.info("Manual approval active for this exact script.")
+        elif current_pass:
+            st.success("Compliance passed. Voiceover is unlocked.")
         else:
-            st.caption("The button activates after the exact current script has a green compliance result or manual approval.")
+            st.info("Voiceover unlocks after a PASS or manual approval for the exact current script.")
+
+        render_voice_card(selected_voice_name)
+        if audio_hash and audio_hash != current_hash:
+            st.info("The script changed after this audio was created. Generate a new voiceover for the current script.")
+
         generate_voice = st.button(
             "Generate Clean Voiceover",
             type="primary",
@@ -1221,63 +1264,60 @@ if "script_editor" in st.session_state:
             disabled=not (current_approved and selected_voice_id and ELEVENLABS_API_KEY),
         )
 
-    if generate_voice:
-        try:
-            status = st.status("Generating voiceover…", expanded=True)
-            status.write(f"Generating {selected_voice_name} in ElevenLabs with its saved preset…")
-            raw = synthesize(
-                ELEVENLABS_API_KEY,
-                selected_voice_id,
-                st.session_state.script_editor,
-                model_id=ELEVEN_MODEL,
-                stability=float(st.session_state.voice_stability),
-                similarity_boost=float(st.session_state.voice_similarity),
-                style=float(st.session_state.voice_style),
-                speed=float(st.session_state.voice_speed),
-                use_speaker_boost=bool(st.session_state.voice_speaker_boost),
-            )
-            status.write(f"Removing silence and keeping {float(st.session_state.keep_silence):.2f}s around cuts…")
-            cleaned, meta = clean_audio(
-                raw,
-                keep_seconds=float(st.session_state.keep_silence),
-                hf_token=HF_TOKEN or None,
-                use_huggingface=bool(st.session_state.use_hf),
-            )
-            st.session_state.raw_audio = raw
-            st.session_state.clean_audio = cleaned
-            st.session_state.audio_meta = meta
-            st.session_state.audio_script_hash = current_hash
-            status.update(label="Clean voiceover ready", state="complete", expanded=False)
-            st.rerun()
-        except Exception as exc:
-            st.error(f"Voiceover generation failed: {exc}")
+        if generate_voice:
+            try:
+                status = st.status("Generating voiceover…", expanded=True)
+                status.write(f"Generating {selected_voice_name} in ElevenLabs…")
+                raw = synthesize(
+                    ELEVENLABS_API_KEY,
+                    selected_voice_id,
+                    st.session_state.script_editor,
+                    model_id=ELEVEN_MODEL,
+                    stability=float(st.session_state.voice_stability),
+                    similarity_boost=float(st.session_state.voice_similarity),
+                    style=float(st.session_state.voice_style),
+                    speed=float(st.session_state.voice_speed),
+                    use_speaker_boost=bool(st.session_state.voice_speaker_boost),
+                )
+                status.write(f"Removing silence and keeping {float(st.session_state.keep_silence):.2f}s around cuts…")
+                cleaned, meta = clean_audio(
+                    raw,
+                    keep_seconds=float(st.session_state.keep_silence),
+                    hf_token=HF_TOKEN or None,
+                    use_huggingface=bool(st.session_state.use_hf),
+                )
+                st.session_state.raw_audio = raw
+                st.session_state.clean_audio = cleaned
+                st.session_state.audio_meta = meta
+                st.session_state.audio_script_hash = current_hash
+                status.update(label="Clean voiceover ready", state="complete", expanded=False)
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Voiceover generation failed: {exc}")
 
-if st.session_state.get("clean_audio"):
-    st.divider()
-    render_step(4, "Finished audio")
-    meta = st.session_state.get("audio_meta", {})
-    if meta.get("warning"):
-        st.warning(meta["warning"])
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Before cleanup", f'{meta.get("before_seconds", 0):.1f}s')
-    m2.metric("Final length", f'{meta.get("after_seconds", 0):.1f}s')
-    m3.metric("Silence removed", f'{meta.get("seconds_removed", 0):.1f}s')
-    st.caption(f'Silence processing: {meta.get("source", "—")}')
-
-    st.audio(st.session_state.clean_audio, format="audio/mp3")
-    name = safe_filename(st.session_state.get("product_name_input", "voiceover"))
-    d1, d2 = st.columns(2)
-    d1.download_button(
-        "Download Clean MP3",
-        data=st.session_state.clean_audio,
-        file_name=f"{name}_clean.mp3",
-        mime="audio/mpeg",
-        use_container_width=True,
-    )
-    d2.download_button(
-        "Download Raw ElevenLabs MP3",
-        data=st.session_state.raw_audio,
-        file_name=f"{name}_raw.mp3",
-        mime="audio/mpeg",
-        use_container_width=True,
-    )
+        if st.session_state.get("clean_audio"):
+            st.markdown("### Finished audio")
+            meta = st.session_state.get("audio_meta", {})
+            if meta.get("warning"):
+                st.warning(meta["warning"])
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Before", f'{meta.get("before_seconds", 0):.1f}s')
+            m2.metric("Final", f'{meta.get("after_seconds", 0):.1f}s')
+            m3.metric("Removed", f'{meta.get("seconds_removed", 0):.1f}s')
+            st.audio(st.session_state.clean_audio, format="audio/mp3")
+            name = safe_filename(st.session_state.get("product_name_input", "voiceover"))
+            d1, d2 = st.columns(2)
+            d1.download_button(
+                "Download Clean MP3",
+                data=st.session_state.clean_audio,
+                file_name=f"{name}_clean.mp3",
+                mime="audio/mpeg",
+                use_container_width=True,
+            )
+            d2.download_button(
+                "Download Raw MP3",
+                data=st.session_state.raw_audio,
+                file_name=f"{name}_raw.mp3",
+                mime="audio/mpeg",
+                use_container_width=True,
+            )

@@ -172,3 +172,11 @@ The **Regenerate Script** control now includes an angle selector:
 - Different villain / objection
 
 Regeneration still reuses the already fetched product and selected photos, so it does not spend another SociaVault credit.
+
+## Compact tabbed workbench
+
+The post-generation workspace is now split into four tabs: **Script**, **Compliance**, **Save**, and **Voiceover**. This keeps the page short and prevents the compliance audit from creating a long wall of text.
+
+The Compliance tab shows only the current rating, the auditor's short final verdict, and a compact selectable rewrite table. The full compliance report is collapsed under **Full auditor report** and only needs to be opened when deeper review is necessary. Manual override is also collapsed by default.
+
+TikTok Shop product photos are now kept inside a collapsed **Choose product photos** section so the main setup screen stays compact while still allowing manual photo selection.

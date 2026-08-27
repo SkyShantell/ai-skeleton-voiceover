@@ -54,6 +54,22 @@ def parse_rating(report: str) -> str:
     return "UNKNOWN"
 
 
+
+
+def parse_final_summary(report: str) -> str:
+    """Return only the auditor's short final verdict for compact UI display."""
+    if not report.strip():
+        return ""
+    match = re.search(
+        r"##\s*4\.\s*FINAL SUMMARY\s*(.*?)(?=##\s*\d+\.|\Z)",
+        report,
+        flags=re.I | re.S,
+    )
+    text = match.group(1) if match else ""
+    text = re.sub(r"^[\s\-•]+", "", text.strip())
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
 def _clean_rewrite_value(value: str) -> str:
     text = value.strip()
     text = re.sub(r"^[\-•]\s*", "", text)

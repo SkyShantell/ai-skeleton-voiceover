@@ -101,11 +101,11 @@ APP_PASSWORD = "team-password"
 HF_TOKEN = "hf_..."
 ```
 
-Optional model overrides:
+Model configuration:
+
+All OpenAI stages are fixed to **GPT-5.6 Sol** in this build: product fact extraction, selected-photo reading, Script DNA writing/repair, and compliance auditing. The old `OPENAI_MODEL_SCRIPT`, `OPENAI_MODEL_COMPLIANCE`, and `OPENAI_MODEL_IMAGE` secrets are ignored, so an older Streamlit secret cannot accidentally keep one stage on a mini model.
 
 ```toml
-OPENAI_MODEL_SCRIPT = "gpt-5.4-mini"
-OPENAI_MODEL_COMPLIANCE = "gpt-5.4-mini"
 ELEVENLABS_MODEL = "eleven_multilingual_v2"
 ```
 
@@ -130,13 +130,7 @@ All primary, secondary, download, hover, and disabled button states now use expl
 
 
 ## TikTok Shop product photo selection
-After **Fetch Product**, the app shows up to 8 TikTok Shop listing photos directly on the page. All are selected by default. Uncheck any photo you do not want the AI to read. On **Generate Script + Run Compliance**, the selected photos are sent to the configured OpenAI image-capable model so visible benefits, ingredients, usage directions, differentiators, warnings, and other labeled facts can be added to product grounding. Price, stock, coupons, testimonials, and inferred before/after effects are excluded.
-
-Optional Streamlit secret:
-```toml
-OPENAI_MODEL_IMAGE = "gpt-5.4-mini"
-```
-If omitted, the app uses `OPENAI_MODEL_SCRIPT` for product-photo reading.
+After **Fetch Product**, the app shows up to **12** TikTok Shop listing photos directly on the page. **None are selected by default.** The VA checks only the photos they want GPT-5.6 Sol to read. On **Generate Script + Run Compliance**, those selected photos are analyzed for visible benefits, ingredients, usage directions, differentiators, warnings, and other labeled product facts. Price, stock, coupons, testimonials, and inferred before/after effects are excluded.
 
 ## Script style lock
 
@@ -147,3 +141,9 @@ TikTok rating/review-count/sold-count metadata is kept out of Script DNA groundi
 ## Arch C sample-style lock
 
 Arch C generation now follows the supplied canonical day-by-day samples: `What would actually happen...` hook, a real Day 1 use/sensory + skepticism beat, Week 1/2 subtle milestone, Day 30 shift/click, Day 60/endpoint payoff, `But here's where/what most people go/get wrong` villain pivot, decisive product reveal, then a short callback + orange-cart CTA. The preferred length remains 240-260 words, with up to 270 accepted when the timeline needs the extra room. Unsupported price, stock, discount, free-shipping, scarcity, and marketplace-meta claims are not added just to mimic the samples.
+
+## Canonical sample scripts + regeneration
+
+The writer now receives the user's real **Arch A** and **Arch C** scripts directly as few-shot style references via `prompts/canonical_arch_a_examples.md` and `prompts/canonical_arch_c_examples.md`. They are used for cadence, compression, transitions, and beat shape only; product facts/offers from the examples are never treated as facts for the current product.
+
+After a script is generated, **Regenerate Script** writes a materially fresh take from the same loaded product and currently selected photos without spending another SociaVault credit. The prior draft is sent as an explicit “do not copy” reference so the rerun changes the angle/wording rather than merely paraphrasing sentence-by-sentence. The new script is automatically sent through compliance again.

@@ -462,8 +462,7 @@ def load_saved_into_workspace(entry: dict[str, Any]) -> None:
     st.session_state.product_name_input = str(entry.get("product_name") or "")
     st.session_state.tiktok_product_url_input = str(entry.get("tiktok_product_url") or "")
     st.session_state.scraped_product = entry.get("scraped_product") or {}
-    scraped_images = (st.session_state.scraped_product or {}).get("images") or []
-    st.session_state.selected_product_image_urls = entry.get("selected_product_image_urls") or scraped_images[:8]
+    st.session_state.selected_product_image_urls = list(entry.get("selected_product_image_urls") or [])
     st.session_state.product_image_facts = str(entry.get("product_image_facts") or "")
     st.session_state.product_details_input = str(entry.get("product_details") or "")
     architecture = str(entry.get("architecture_choice") or "Auto Detect")
@@ -551,9 +550,12 @@ OPENAI_API_KEY = secret("OPENAI_API_KEY")
 ELEVENLABS_API_KEY = secret("ELEVENLABS_API_KEY")
 HF_TOKEN = secret("HF_TOKEN")
 SOCIAVAULT_API_KEY = secret("SOCIAVAULT_API_KEY")
-SCRIPT_MODEL = secret("OPENAI_MODEL_SCRIPT", "gpt-5.4-mini")
-COMPLIANCE_MODEL = secret("OPENAI_MODEL_COMPLIANCE", "gpt-5.4-mini")
-IMAGE_MODEL = secret("OPENAI_MODEL_IMAGE", SCRIPT_MODEL)
+# All OpenAI stages intentionally use the same high-quality model.
+# Legacy OPENAI_MODEL_SCRIPT / COMPLIANCE / IMAGE secrets are ignored.
+OPENAI_MODEL = "gpt-5.6-sol"
+SCRIPT_MODEL = OPENAI_MODEL
+COMPLIANCE_MODEL = OPENAI_MODEL
+IMAGE_MODEL = OPENAI_MODEL
 ELEVEN_MODEL = secret("ELEVENLABS_MODEL", "eleven_multilingual_v2")
 LIBRARY_GITHUB_TOKEN = secret("SCRIPT_LIBRARY_GITHUB_TOKEN")
 LIBRARY_GITHUB_REPO = secret("SCRIPT_LIBRARY_GITHUB_REPO")
@@ -592,6 +594,7 @@ st.markdown(
     <span>2 · Review compliance</span>
     <span>3 · Save / recall scripts</span>
     <span>4 · Generate clean MP3</span>
+    <span>AI · GPT-5.6 Sol</span>
   </div>
 </div>
 """,
@@ -732,8 +735,12 @@ with left:
                     get_related_videos=False,
                 )
             reset_output(clear_loaded_id=True)
+            for key in list(st.session_state.keys()):
+                if str(key).startswith("use_product_photo_"):
+                    st.session_state.pop(key, None)
             st.session_state.scraped_product = scraped
-            st.session_state.selected_product_image_urls = (scraped.get("images") or [])[:8]
+            # Product photos are intentionally NOT auto-selected. The VA chooses exactly which ones to read.
+            st.session_state.selected_product_image_urls = []
             st.session_state.product_image_facts = ""
             st.session_state.product_name_input = scraped.get("title", "")
             st.session_state.product_details_input = scraped.get("script_details", "")
@@ -753,11 +760,11 @@ with left:
         info_cols[2].metric("Rating", str(scraped.get("rating") or "—"))
         info_cols[3].metric("Reviews", f"{int(scraped.get('review_count')):,}" if isinstance(scraped.get("review_count"), (int, float)) else "—")
 
-        image_urls = (scraped.get("images") or [])[:8]
+        image_urls = (scraped.get("images") or [])[:12]
         if image_urls:
             st.markdown("#### Select product photos for AI to read")
-            st.caption("All listing photos are selected by default. Uncheck any photo you do not want used for Script DNA. The AI reads visible benefit text, ingredients, directions, differentiators, warnings, and other labeled product facts — never price or stock.")
-            selected_before = set(st.session_state.get("selected_product_image_urls") or image_urls)
+            st.caption("No photos are selected automatically. Check only the listing photos you want GPT-5.6 Sol to read for visible benefits, ingredients, directions, differentiators, warnings, and other labeled product facts. Price and stock are ignored.")
+            selected_before = set(st.session_state.get("selected_product_image_urls") or [])
             selected_now: list[str] = []
             safe_pid = re.sub(r"[^A-Za-z0-9]+", "_", str(scraped.get("product_id") or "product"))
             image_cols = st.columns(min(4, len(image_urls)))
@@ -866,11 +873,18 @@ generate_clicked = st.button(
     disabled=not (OPENAI_API_KEY and product_name.strip() and product_details.strip()),
 )
 
-if generate_clicked:
+regenerate_requested = bool(st.session_state.pop("regenerate_script_requested", False))
+should_generate = generate_clicked or regenerate_requested
+previous_script_for_regen = str(st.session_state.get("script_editor") or "") if regenerate_requested else ""
+
+if should_generate:
     reset_output(clear_loaded_id=False)
     st.session_state.save_script_title = product_name.strip()
     try:
-        progress = st.status("Building Script DNA voiceover…", expanded=True)
+        progress = st.status(
+            "Regenerating Script DNA voiceover…" if regenerate_requested else "Building Script DNA voiceover…",
+            expanded=True,
+        )
         selected_images = list(st.session_state.get("selected_product_image_urls") or [])
         image_facts = ""
         if selected_images:
@@ -888,7 +902,7 @@ if generate_clicked:
         facts = extract_product_facts(OPENAI_API_KEY, SCRIPT_MODEL, product_name, grounded_details)
         st.session_state.product_facts = facts
 
-        progress.write("Writing the Skeleton / Script DNA script…")
+        progress.write("Writing the Skeleton / Script DNA script with GPT-5.6 Sol using the canonical sample scripts…")
         script, verification = generate_script(
             OPENAI_API_KEY,
             SCRIPT_MODEL,
@@ -897,6 +911,7 @@ if generate_clicked:
             facts,
             architecture_choice,
             viral_transcript,
+            previous_script=previous_script_for_regen,
         )
         st.session_state.script_editor = script
         st.session_state.script_verification = verification
@@ -972,7 +987,21 @@ if "script_editor" in st.session_state:
             height=420,
             help="Editing the script invalidates the prior green check or manual override until the exact new text is rechecked/approved.",
         )
-        recheck = st.button("Recheck Edited Script", use_container_width=True)
+        action_left, action_right = st.columns(2)
+        with action_left:
+            regenerate = st.button(
+                "Regenerate Script",
+                type="primary",
+                use_container_width=True,
+                help="Writes a fresh take from the same product details and currently selected photos. SociaVault is not fetched again.",
+            )
+        with action_right:
+            recheck = st.button("Recheck Edited Script", use_container_width=True)
+
+        if regenerate:
+            st.session_state.regenerate_script_requested = True
+            st.rerun()
+
         if recheck:
             try:
                 with st.spinner("Rechecking the edited script…"):

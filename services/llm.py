@@ -71,7 +71,7 @@ def analyze_product_images(
     Returns only visibly supported packaging/listing-image facts. It intentionally
     ignores prices, stock, testimonials, and inferred before/after effects.
     """
-    urls = [str(u).strip() for u in image_urls if str(u).strip().startswith("http")][:8]
+    urls = [str(u).strip() for u in image_urls if str(u).strip().startswith("http")][:12]
     if not urls:
         return ""
     if not api_key:

@@ -47,6 +47,19 @@ def read_prompt(name: str) -> str:
     return (PROMPTS / name).read_text(encoding="utf-8")
 
 
+def canonical_examples(architecture: str) -> str:
+    """Return the user-provided canonical scripts for the active architecture.
+
+    These are fed directly to the writer as few-shot style references. AUTO receives
+    both sets because the model must choose the architecture before writing.
+    """
+    if architecture == "ARCH A":
+        return read_prompt("canonical_arch_a_examples.md")
+    if architecture == "ARCH C":
+        return read_prompt("canonical_arch_c_examples.md")
+    return read_prompt("canonical_arch_a_examples.md") + "\n\n" + read_prompt("canonical_arch_c_examples.md")
+
+
 def architecture_from_choice(choice: str) -> str:
     if choice == "Symptom Stack (Arch A)":
         return "ARCH A"
@@ -198,9 +211,11 @@ def _repair_script(
     product_details: str,
     product_facts: dict[str, Any],
     architecture: str,
+    examples: str,
 ) -> str:
-    system = skill + "\n\n" + style_lock + "\n\n" + grounding
-    user = f"""Repair the draft below so it passes the Script DNA skill's own mandatory verification.
+    system = skill + "\n\n" + style_lock + "\n\n" + examples + "\n\n" + grounding
+    user = f"""Repair the draft below so it passes the Script DNA skill's own mandatory verification AND sounds like the user-provided canonical examples embedded in the system prompt.
+Match their compression, transitions, sentence rhythm, and specificity. Do not copy facts from the examples.
 Do not change factual grounding and do not introduce new product claims.
 
 REQUESTED ARCHITECTURE: {architecture}
@@ -226,14 +241,29 @@ def generate_script(
     product_facts: dict[str, Any],
     architecture_choice: str,
     viral_transcript: str = "",
+    previous_script: str = "",
 ) -> tuple[str, dict[str, Any]]:
     skill = read_prompt("script_dna.md")
     style_lock = read_prompt("script_style_lock.md")
     grounding = read_prompt("script_grounding.md")
     architecture = architecture_from_choice(architecture_choice)
-    system = skill + "\n\n" + style_lock + "\n\n" + grounding
+    examples = canonical_examples(architecture)
+    system = skill + "\n\n" + style_lock + "\n\n" + examples + "\n\n" + grounding
 
     viral = viral_transcript.strip() or "None supplied."
+    prior = previous_script.strip()
+    regeneration = ""
+    if prior:
+        regeneration = f"""
+
+REGENERATION INSTRUCTION:
+This is a rerun. Write a materially fresh version while keeping the same product facts and requested architecture.
+Do not simply paraphrase sentence-by-sentence. Change the symptom wording/angle, villain phrasing, and differentiator emphasis when the grounded facts allow it.
+Do not weaken the canonical structure. Avoid reusing distinctive phrases from the previous draft except required Script DNA transitions/CTA.
+
+PREVIOUS DRAFT TO AVOID COPYING:
+{prior}
+"""
     user = f"""Create one TikTok Shop affiliate voiceover script using the supplied Script DNA skill.
 
 ARCHITECTURE SELECTION: {architecture}
@@ -246,7 +276,9 @@ STRICTLY EXTRACTED PRODUCT FACTS:
 
 OPTIONAL VIRAL TRANSCRIPT:
 {viral}
+{regeneration}
 
+The system prompt contains the user's real canonical Arch A/Arch C scripts. Study them as few-shot STYLE examples and match their cadence closely. Never borrow product facts, offers, discounts, scarcity, or unsupported claims from those examples.
 If architecture is AUTO, follow the skill's architecture-selection rules. Return only the final plain voiceover script."""
 
     script = generate_text(api_key, model, system, user, temperature=0.2).strip()
@@ -268,6 +300,7 @@ If architecture is AUTO, follow the skill's architecture-selection rules. Return
             product_details,
             product_facts,
             architecture,
+            examples,
         )
         verification = verify_script(script, architecture)
 

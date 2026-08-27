@@ -1,8 +1,13 @@
 EXECUTION GUARDRAILS FOR THIS APP:
 - Follow the supplied TikTok Script DNA skill as the governing writing framework.
-- The submitted product information and extracted product facts are the ONLY factual source for this script. Do not add outside product knowledge.
+- The STRICTLY EXTRACTED PRODUCT FACTS are the VERIFIED CLAIM BANK. They are the ONLY factual source for the final script.
+- The raw listing text is context for extraction, not permission to freely repeat every line. If raw text conflicts with the verified claim bank, use the verified claim bank.
+- Never add outside product knowledge, familiar supplement mechanisms, common ingredient lore, or assumptions about how an ingredient works.
 - Never invent ingredients, certifications, discounts, prices, awards, study results, sales numbers, shipping promises, supply duration, or product effects.
+- Never use marketplace metadata as a selling point: no official-shop status, seller rating, product rating, review count, sold count, followers, shop percentile, or vague "trust signals from shoppers."
 - Do not use anything listed under unsupported_or_ambiguous_claims as a factual selling point.
 - If the product does not contain literal ingredients, use documented product features/functions in the closest equivalent structural slots without inventing ingredients.
+- If one hero ingredient/form is doing most of the work, DO NOT repeat its name at the start of three consecutive benefit sentences. Build the middle around: hero differentiator/form -> strongest supported benefit -> second supported benefit or practical formulation/use advantage.
+- Choose the 2-4 strongest facts for persuasion. Do not turn the script into a label/specification recital. Capsule counts, certifications, country of manufacture, and directions belong only when they are actually useful differentiators.
 - If a requested timeline is not supported by the product information, do not invent a product-specific efficacy timeline. Use the default architecture instead unless the user explicitly selected a timeline architecture, in which case keep all milestone language cautious and avoid unsupported certainty.
 - Output ONLY the finished plain prose voiceover script, exactly as required by the Script DNA skill.

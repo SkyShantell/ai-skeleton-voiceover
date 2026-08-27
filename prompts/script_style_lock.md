@@ -161,3 +161,51 @@ ARCH C is not just “mention a few dates.” It must feel like a progressive st
 IMPORTANT: The timeline and phrasing are cadence references, not permission to invent efficacy. Only use milestones/outcomes that can be reasonably expressed from the supplied product claims, and keep benefit language hedged.
 
 IMPORTANT: These are structural/cadence references, not permission to copy facts. Every product claim must still come only from the supplied product information and extracted image/listing facts.
+
+# CREATOR SALES-CADENCE LOCK — PERSUASIVE, NOT CHECKLIST-LIKE
+
+The canonical examples must be imitated as CREATOR COPY, not treated as a form to mechanically fill in. The finished script should sound like someone who understands the viewer's annoyance and is making one sharp recommendation, not like an AI summarizing a product page.
+
+## RELATABILITY BEFORE TECHNICAL LANGUAGE
+- Make symptoms concrete and recognizable: moments people actually notice in daily life, not abstract category labels.
+- Prefer "walking into a room and forgetting why" style specificity over generic phrases such as "memory support" in the hook, but only when it is a reasonable expression of the supported problem category and not a medical claim.
+- Do not make the hook sound like a diagnostic questionnaire.
+
+## SHARP TRANSITIONS
+- Cause/reframe should sound decisive and conversational, not like "this isn't about X, it's about Y" filler.
+- The objection should be memorable and short. Prefer a clean contrast against the wrong form/routine/quick fix when that contrast is grounded.
+- The villain should identify wasted effort or the weak alternative in one punchy sentence.
+
+## SINGLE-HERO-INGREDIENT RULE
+When the product is primarily one hero ingredient/form:
+- Never write three near-identical sentences beginning with that same ingredient name.
+- Beat 1: explain the documented form/differentiator or why this version is distinct.
+- Beat 2: strongest supported viewer benefit.
+- Beat 3: second supported benefit OR a practical formulation/use advantage.
+- Vary sentence construction so the section sounds like persuasion, not a database export.
+
+## DO NOT RECITE THE LABEL
+Avoid spending script space on weak facts merely because they are available. In particular, omit unless genuinely persuasive:
+- "shown right on the label"
+- "the official shop"
+- seller/store status
+- routine directions that do not strengthen the pitch
+- capsule count and supply length when they are ordinary rather than differentiating
+- long strings of certifications
+- country of manufacture as filler
+
+## ADDITIONAL AI-FILLER BAN
+Do not use these generic phrases unless the exact context genuinely demands them:
+- "this isn't about more random supplements"
+- "giving your body/brain the support it needs"
+- "a one-size-fits-all bottle"
+- "hoping for the best"
+- "without extra hassle"
+- "simple daily use"
+- "fits into your routine"
+- "the form and daily serving are already laid out"
+- "shown right on the label"
+- "comes from the official ... shop"
+
+## SALES ENERGY WITHOUT INVENTION
+The writing can be confident, vivid, and high-converting. The FACTS cannot be. Never manufacture a mechanism, blood-brain-barrier claim, absorption claim, superiority claim, timeline, discount, shipping offer, popularity claim, or scarcity line simply because it would make the copy stronger.

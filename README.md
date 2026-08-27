@@ -147,3 +147,28 @@ Arch C generation now follows the supplied canonical day-by-day samples: `What w
 The writer now receives the user's real **Arch A** and **Arch C** scripts directly as few-shot style references via `prompts/canonical_arch_a_examples.md` and `prompts/canonical_arch_c_examples.md`. They are used for cadence, compression, transitions, and beat shape only; product facts/offers from the examples are never treated as facts for the current product.
 
 After a script is generated, **Regenerate Script** writes a materially fresh take from the same loaded product and currently selected photos without spending another SociaVault credit. The prior draft is sent as an explicit “do not copy” reference so the rerun changes the angle/wording rather than merely paraphrasing sentence-by-sentence. The new script is automatically sent through compliance again.
+
+## Selective compliance rewrites
+
+When the compliance auditor returns one or more `Original -> Compliant Rewrite` fixes, the app now displays each fix separately with its own checkbox under **Choose which compliance fixes to apply**. Nothing is applied automatically.
+
+The VA can select only the fixes they agree with and click **Apply Selected Fixes + Recheck**. The app applies only those selected changes, automatically runs compliance again on the exact revised script, clears any old manual override/audio approval, and keeps ElevenLabs locked until the revised script passes or is manually approved.
+
+The auditor prompt also requires atomic rewrite pairs so unrelated changes are not bundled into one checkbox.
+
+## Stronger creator-style writing + regeneration angles
+
+The Script DNA writer still uses GPT-5.6 Sol and the user's canonical Arch A / Arch C sample scripts, but the prompt now explicitly prioritizes creator sales cadence over checklist-like label recitation. The verified product-fact JSON is treated as the sole **Verified Claim Bank**. Marketplace metadata such as official-shop status, ratings, sold/review counts, seller metrics, prices, stock, coupons, and shipping offers is excluded from Script DNA grounding.
+
+For products dominated by one hero ingredient/form, the writer is specifically told not to repeat the same ingredient at the start of three consecutive benefit lines. It instead varies the middle around the documented hero differentiator, strongest supported benefit, second supported benefit, and/or practical formulation advantage.
+
+The **Regenerate Script** control now includes an angle selector:
+
+- Fresh take
+- More relatable / emotional
+- More aggressive hook
+- More educational
+- Different pain points
+- Different villain / objection
+
+Regeneration still reuses the already fetched product and selected photos, so it does not spend another SociaVault credit.

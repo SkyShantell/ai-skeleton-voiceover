@@ -105,6 +105,12 @@ def verify_script(script: str, architecture: str) -> dict[str, Any]:
         r"\bstrong trust signals\b",
         r"\btrust signals from shoppers\b",
         r"\bshoppers seem to\b",
+        r"\bshown right on the label\b",
+        r"\bofficial (?:life extension )?supplements shop\b",
+        r"\bone-size-fits-all\b",
+        r"\bwithout extra hassle\b",
+        r"\bsimple daily use\b",
+        r"\bthe form and daily serving are already laid out\b",
     ]
 
     if resolved == "ARCH A":
@@ -242,6 +248,7 @@ def generate_script(
     architecture_choice: str,
     viral_transcript: str = "",
     previous_script: str = "",
+    regeneration_angle: str = "Fresh take",
 ) -> tuple[str, dict[str, Any]]:
     skill = read_prompt("script_dna.md")
     style_lock = read_prompt("script_style_lock.md")
@@ -257,9 +264,18 @@ def generate_script(
         regeneration = f"""
 
 REGENERATION INSTRUCTION:
-This is a rerun. Write a materially fresh version while keeping the same product facts and requested architecture.
-Do not simply paraphrase sentence-by-sentence. Change the symptom wording/angle, villain phrasing, and differentiator emphasis when the grounded facts allow it.
+This is a rerun. Write a materially fresh version while keeping the same verified product facts and requested architecture.
+Selected regeneration angle: {regeneration_angle}.
+Do not simply paraphrase sentence-by-sentence. Change the opening symptom framing, villain phrasing, and differentiator emphasis when the verified claim bank allows it.
 Do not weaken the canonical structure. Avoid reusing distinctive phrases from the previous draft except required Script DNA transitions/CTA.
+
+ANGLE GUIDANCE:
+- Fresh take: materially different wording and emphasis.
+- More relatable / emotional: use more recognizable real-life frustrations in the hook and callback.
+- More aggressive hook: make the opening sharper and more pattern-interrupting without exaggerating facts.
+- More educational: make the cause/reframe and product differentiator clearer while staying conversational.
+- Different pain points: choose a different supported symptom/problem cluster from the verified claim bank.
+- Different villain / objection: keep the same benefits but change the weak alternative or wasted-effort contrast.
 
 PREVIOUS DRAFT TO AVOID COPYING:
 {prior}
@@ -271,14 +287,16 @@ PRODUCT NAME: {product_name.strip()}
 PRODUCT DETAILS (source material):
 {product_details.strip()}
 
-STRICTLY EXTRACTED PRODUCT FACTS:
+VERIFIED CLAIM BANK — ONLY FACTS ALLOWED IN THE SCRIPT:
 {json.dumps(product_facts, indent=2, ensure_ascii=False)}
 
 OPTIONAL VIRAL TRANSCRIPT:
 {viral}
 {regeneration}
 
-The system prompt contains the user's real canonical Arch A/Arch C scripts. Study them as few-shot STYLE examples and match their cadence closely. Never borrow product facts, offers, discounts, scarcity, or unsupported claims from those examples.
+The system prompt contains the user's real canonical Arch A/Arch C scripts. Imitate them as creator sales copy: match their compression, relatability, sentence rhythm, sharp transitions, and decisive product reveal. Do NOT mechanically fill a checklist.
+Use only the VERIFIED CLAIM BANK for factual assertions. Never borrow product facts, mechanisms, offers, discounts, scarcity, or unsupported claims from the examples or from outside knowledge.
+Select the strongest persuasive facts instead of reciting every specification. If one hero ingredient/form dominates the product, do not repeat its name at the start of three consecutive benefit beats.
 If architecture is AUTO, follow the skill's architecture-selection rules. Return only the final plain voiceover script."""
 
     script = generate_text(api_key, model, system, user, temperature=0.2).strip()

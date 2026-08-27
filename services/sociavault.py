@@ -130,12 +130,6 @@ def _format_script_details(product: dict[str, Any]) -> str:
         lines.append(f"LISTING TITLE: {title}")
     if product.get("category"):
         lines.append(f"CATEGORY: {_clean(product['category'])}")
-    if product.get("seller_name"):
-        seller_line = f"SELLER: {_clean(product['seller_name'])}"
-        if product.get("official_shop"):
-            seller_line += " (TikTok listing marks this as an official shop)"
-        lines.append(seller_line)
-
     specs = product.get("specifications") or []
     if specs:
         lines.append("\nLISTING SPECIFICATIONS:")
@@ -149,7 +143,7 @@ def _format_script_details(product: dict[str, Any]) -> str:
 
     lines.append(
         "\nSOURCE NOTE: These text/specification details were pulled from the current TikTok Shop listing via SociaVault. "
-        "Selected product photos are analyzed separately before Script DNA runs. Ratings, review counts, sold counts, individual customer-review claims, price, stock, and coupon values are excluded from Script DNA grounding."
+        "Selected product photos are analyzed separately before Script DNA runs. Seller/shop status, ratings, review counts, sold counts, individual customer-review claims, price, stock, coupon values, and shipping offers are excluded from Script DNA grounding."
     )
     return "\n".join(lines).strip()
 

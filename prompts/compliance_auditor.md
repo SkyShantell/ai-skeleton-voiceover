@@ -49,8 +49,10 @@ You must structure your response EXACTLY as follows for every review. Do not dev
 
 ## 3. REQUIRED FIXES & SUGGESTED REVIEWS
 
-- **Original:** [Problematic phrase]
-- **Compliant Rewrite:** [Actionable, verbatim rewrite that makes the video 100% compliant while maintaining high conversion energy]
+For every distinct fix, output ONE separate Original -> Compliant Rewrite pair. Keep each pair atomic so the user can choose fixes individually. `Original` must quote the exact smallest phrase from the submitted script that needs changing; do not combine unrelated changes into one pair. If there are no required changes, state `No rewrite suggestions required.`
+
+- **Original:** [Exact problematic phrase]
+- **Compliant Rewrite:** [Actionable, verbatim rewrite that fixes only that issue while maintaining high conversion energy]
 
 ## 4. FINAL SUMMARY
 [A brief 1-2 sentence final verdict on the content's readiness for publishing.]

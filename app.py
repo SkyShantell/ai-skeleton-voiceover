@@ -9,7 +9,7 @@ from typing import Any
 
 import streamlit as st
 
-from services.compliance import audit_script
+from services.compliance import apply_selected_rewrites, audit_script, parse_rewrite_suggestions
 from services.elevenlabs import synthesize
 from services.llm import LLMError, analyze_product_images
 from services.script_engine import extract_product_facts, generate_script
@@ -68,6 +68,15 @@ ARCHITECTURE_OPTIONS = [
     "Auto Detect",
     "Symptom Stack (Arch A)",
     "Day-by-Day Journey (Arch C)",
+]
+
+REGENERATION_ANGLES = [
+    "Fresh take",
+    "More relatable / emotional",
+    "More aggressive hook",
+    "More educational",
+    "Different pain points",
+    "Different villain / objection",
 ]
 
 st.set_page_config(
@@ -381,6 +390,7 @@ def clear_workspace() -> None:
         "scraped_product": {},
         "selected_product_image_urls": [],
         "product_image_facts": "",
+        "regeneration_angle_select": "Fresh take",
     }
     for key, value in defaults.items():
         st.session_state[key] = value
@@ -577,6 +587,7 @@ defaults: dict[str, Any] = {
     "scraped_product": {},
     "selected_product_image_urls": [],
     "product_image_facts": "",
+    "regeneration_angle_select": "Fresh take",
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -912,6 +923,7 @@ if should_generate:
             architecture_choice,
             viral_transcript,
             previous_script=previous_script_for_regen,
+            regeneration_angle=st.session_state.get("regeneration_angle_select", "Fresh take"),
         )
         st.session_state.script_editor = script
         st.session_state.script_verification = verification
@@ -986,6 +998,12 @@ if "script_editor" in st.session_state:
             key="script_editor",
             height=420,
             help="Editing the script invalidates the prior green check or manual override until the exact new text is rechecked/approved.",
+        )
+        st.selectbox(
+            "Regenerate angle",
+            REGENERATION_ANGLES,
+            key="regeneration_angle_select",
+            help="Choose how different you want the next draft to feel. Regeneration reuses the current product data and selected photos and does not call SociaVault again.",
         )
         action_left, action_right = st.columns(2)
         with action_left:
@@ -1082,6 +1100,57 @@ if "script_editor" in st.session_state:
                     mime="text/plain",
                     use_container_width=True,
                 )
+
+        rewrite_suggestions = parse_rewrite_suggestions(report) if (report and compliance_hash == current_hash) else []
+        if rewrite_suggestions and not current_pass:
+            with st.expander("Choose which compliance fixes to apply", expanded=True):
+                st.caption(
+                    "Each rewrite is optional. Check only the changes you want, then the app will apply those selected fixes and automatically run compliance again on the exact updated script."
+                )
+                selected_rewrites = []
+                report_token = hashlib.sha1(report.encode("utf-8")).hexdigest()[:10]
+                for idx, suggestion in enumerate(rewrite_suggestions, start=1):
+                    fix_key = f"compliance_fix_{report_token}_{idx}"
+                    use_fix = st.checkbox(f"Apply fix {idx}", key=fix_key)
+                    st.markdown(f"**Original:** {suggestion['original']}")
+                    st.markdown(f"**Suggested rewrite:** {suggestion['rewrite']}")
+                    if use_fix:
+                        selected_rewrites.append(suggestion)
+                    if idx != len(rewrite_suggestions):
+                        st.divider()
+
+                if st.button(
+                    "Apply Selected Fixes + Recheck",
+                    type="primary",
+                    use_container_width=True,
+                    disabled=not selected_rewrites,
+                ):
+                    try:
+                        with st.spinner("Applying only your selected compliance fixes and rechecking…"):
+                            revised_script = apply_selected_rewrites(
+                                OPENAI_API_KEY,
+                                COMPLIANCE_MODEL,
+                                st.session_state.script_editor,
+                                selected_rewrites,
+                            )
+                            st.session_state.script_editor = revised_script
+                            st.session_state.pop("compliance_bypass_hash", None)
+                            st.session_state.pop("compliance_bypass_reason", None)
+                            for key in ["raw_audio", "clean_audio", "audio_meta", "audio_script_hash"]:
+                                st.session_state.pop(key, None)
+                            revised_rating, revised_report = audit_script(
+                                OPENAI_API_KEY,
+                                COMPLIANCE_MODEL,
+                                revised_script,
+                                st.session_state.get("on_screen_text_input", ""),
+                                st.session_state.get("visual_cues_input", ""),
+                            )
+                            st.session_state.compliance_rating = revised_rating
+                            st.session_state.compliance_report = revised_report
+                            st.session_state.compliance_script_hash = script_hash(revised_script)
+                        st.rerun()
+                    except Exception as exc:
+                        st.error(f"Could not apply/recheck the selected fixes: {exc}")
 
         with st.expander("Manual compliance override", expanded=(not current_pass and not current_bypass)):
             st.warning(

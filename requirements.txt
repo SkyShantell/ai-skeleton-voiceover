@@ -1,0 +1,5 @@
+streamlit>=1.40
+openai>=1.75
+requests>=2.32
+gradio_client>=1.8
+pydub>=0.25.1

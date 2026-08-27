@@ -930,18 +930,14 @@ with right:
 
     with st.expander("Silence removal"):
         st.slider(
-            "Keep silence around cuts (seconds)",
+            "Keep silence up to (seconds)",
             0.00,
             0.30,
             step=0.01,
             key="keep_silence",
-            help="Default is 0.03 seconds.",
+            help="Default is 0.03 seconds, matching the NeuralFalcon setting you use on the original site.",
         )
-        st.checkbox(
-            "Use NeuralFalcon Hugging Face silence remover",
-            key="use_hf",
-            help="If the public Space fails, the app automatically falls back to the local silence remover.",
-        )
+        st.caption("Uses NeuralFalcon directly. No alternate local cutting algorithm is substituted if the Space fails.")
 
     st.info("🔒 ElevenLabs unlocks after a green PASS or a manual override for the exact current script.")
 
@@ -997,13 +993,14 @@ if should_generate:
         st.session_state.script_editor = script
         st.session_state.script_verification = verification
 
-        progress.write("Running the TikTok Shop compliance mega prompt…")
+        progress.write("Running balanced TikTok Shop compliance…")
         rating, report = audit_script(
             OPENAI_API_KEY,
             COMPLIANCE_MODEL,
             script,
             on_screen_text,
             visual_cues,
+            st.session_state.get("product_facts", {}),
         )
         st.session_state.compliance_rating = rating
         st.session_state.compliance_report = report
@@ -1097,6 +1094,7 @@ if "script_editor" in st.session_state:
                         st.session_state.script_editor,
                         st.session_state.get("on_screen_text_input", ""),
                         st.session_state.get("visual_cues_input", ""),
+                        st.session_state.get("product_facts", {}),
                     )
                 st.session_state.compliance_rating = rating
                 st.session_state.compliance_report = report
@@ -1141,7 +1139,7 @@ if "script_editor" in st.session_state:
                 st.warning("The script changed after the last audit. Recheck it from the Script tab before relying on these results.")
             elif rewrite_suggestions:
                 st.markdown(f"### {len(rewrite_suggestions)} suggested fix{'es' if len(rewrite_suggestions) != 1 else ''}")
-                st.caption("Check only the rewrites you want. The full compliance report is hidden below unless you need it.")
+                st.caption("Only clear policy blockers should appear here. Check only the fixes you want; the full audit stays hidden below.")
                 report_token = hashlib.sha1(report.encode("utf-8")).hexdigest()[:10]
                 editor_data = {
                     "Apply": [False] * len(rewrite_suggestions),
@@ -1191,6 +1189,7 @@ if "script_editor" in st.session_state:
                                 revised_script,
                                 st.session_state.get("on_screen_text_input", ""),
                                 st.session_state.get("visual_cues_input", ""),
+                                st.session_state.get("product_facts", {}),
                             )
                             st.session_state.compliance_rating = revised_rating
                             st.session_state.compliance_report = revised_report
@@ -1199,7 +1198,7 @@ if "script_editor" in st.session_state:
                     except Exception as exc:
                         st.error(f"Could not apply/recheck the selected fixes: {exc}")
             else:
-                st.info("No selectable rewrite suggestions were returned. Use the full report below only if you need more detail.")
+                st.info("No required rewrite pairs were returned. Open the full audit only if you want the details.")
 
         override_left, report_right = st.columns(2)
         with override_left:
@@ -1344,7 +1343,7 @@ if "script_editor" in st.session_state:
                     raw,
                     keep_seconds=float(st.session_state.keep_silence),
                     hf_token=HF_TOKEN or None,
-                    use_huggingface=bool(st.session_state.use_hf),
+                    use_huggingface=True,
                 )
                 st.session_state.raw_audio = raw
                 st.session_state.clean_audio = cleaned

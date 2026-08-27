@@ -180,3 +180,6 @@ The post-generation workspace is now split into four tabs: **Script**, **Complia
 The Compliance tab shows only the current rating, the auditor's short final verdict, and a compact selectable rewrite table. The full compliance report is collapsed under **Full auditor report** and only needs to be opened when deeper review is necessary. Manual override is also collapsed by default.
 
 TikTok Shop product photos are now kept inside a collapsed **Choose product photos** section so the main setup screen stays compact while still allowing manual photo selection.
+
+## Balanced compliance mode
+The compliance auditor is intentionally a guardrail rather than a second scriptwriter. It now receives the same verified product claim bank used by the writer. Normal grounded structure/function language (for example, "helps support focus" or "may support sleep quality") should not be stripped merely for being health-adjacent. Only clear policy blockers create required rewrite pairs; lower-confidence concerns remain advisory and do not block a PASS.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import json
 from pathlib import Path
 from typing import Any
 
@@ -15,15 +16,25 @@ def audit_script(
     script_text: str,
     on_screen_text: str = "",
     visual_cues: str = "",
+    verified_facts: Any | None = None,
 ) -> tuple[str, str]:
     system = (PROMPTS / "compliance_auditor.md").read_text(encoding="utf-8")
+    facts_text = "None supplied."
+    if verified_facts:
+        try:
+            facts_text = json.dumps(verified_facts, ensure_ascii=False, indent=2)
+        except Exception:
+            facts_text = str(verified_facts)
+
     user = (
-        "Please audit the following content for TikTok Shop compliance:\n"
-        f"Spoken Script: `{script_text.strip()}`\n"
-        f"On-Screen Text: `{on_screen_text.strip()}`\n"
-        f"Visual Cues: `{visual_cues.strip()}`"
+        "Please audit the following content for TikTok Shop compliance in BALANCED mode.\n\n"
+        f"Spoken Script:\n{script_text.strip()}\n\n"
+        f"On-Screen Text:\n{on_screen_text.strip() or 'None supplied.'}\n\n"
+        f"Visual Cues:\n{visual_cues.strip() or 'None supplied.'}\n\n"
+        "VERIFIED CLAIM BANK (seller/listing facts already extracted and grounded by the app):\n"
+        f"{facts_text}"
     )
-    report = generate_text(api_key, model, system, user, temperature=0.1).strip()
+    report = generate_text(api_key, model, system, user, temperature=0.0).strip()
     return parse_rating(report), report
 
 

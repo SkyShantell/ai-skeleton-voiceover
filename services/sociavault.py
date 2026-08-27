@@ -173,7 +173,6 @@ def parse_product_response(payload: Any, source_url: str = "") -> dict[str, Any]
     base = data.get("product_base") if isinstance(data.get("product_base"), dict) else {}
     seller = data.get("seller") if isinstance(data.get("seller"), dict) else {}
     reviews = _review_summary(data.get("product_detail_review"))
-    price = base.get("price") if isinstance(base.get("price"), dict) else {}
     logistic = data.get("logistic") if isinstance(data.get("logistic"), dict) else {}
 
     images: list[str] = []
@@ -196,25 +195,10 @@ def parse_product_response(payload: Any, source_url: str = "") -> dict[str, Any]
         "official_shop": _official_shop(seller),
         "specifications": _specifications(base.get("specifications")),
         "description": _description_text(base.get("desc_detailv3")),
-        "images": images[:8],
+        "images": images[:12],
         "sold_count": base.get("sold_count"),
         "rating": reviews.get("rating"),
         "review_count": reviews.get("count"),
-        "stock": sum(
-            int(item.get("stock") or 0)
-            for item in (data.get("skus") or [])
-            if isinstance(item, dict)
-        ) if isinstance(data.get("skus"), list) else None,
-        # Reference-only values: shown to the VA, not inserted into script facts.
-        "reference_price": {
-            "current": _clean(price.get("real_price")),
-            "original": _clean(price.get("original_price")),
-            "discount": _clean(price.get("discount")),
-            "currency": _clean(price.get("currency")),
-            "voucher": _clean((base.get("voucher_reminder") or {}).get("spu_deduction_text"))
-            if isinstance(base.get("voucher_reminder"), dict)
-            else "",
-        },
         "shipping": {
             "free_shipping": logistic.get("free_shipping"),
             "delivery_name": _clean(logistic.get("delivery_name")),

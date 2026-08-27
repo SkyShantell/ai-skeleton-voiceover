@@ -61,6 +61,46 @@ def generate_text(
     return _output_text(response)
 
 
+def generate_multimodal_text(
+    api_key: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    image_urls: list[str],
+    temperature: float | None = None,
+) -> str:
+    """Generate text from a prompt plus remote images using the Responses API."""
+    if not api_key:
+        raise LLMError("OPENAI_API_KEY is missing.")
+
+    client = OpenAI(api_key=api_key)
+    content: list[dict[str, Any]] = [{"type": "input_text", "text": user_prompt}]
+    for url in image_urls:
+        if isinstance(url, str) and url.startswith("http"):
+            content.append({"type": "input_image", "image_url": url})
+
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "instructions": system_prompt,
+        "input": [{"role": "user", "content": content}],
+    }
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+
+    try:
+        response = client.responses.create(**kwargs)
+    except Exception as exc:
+        if temperature is not None and "temperature" in str(exc).lower():
+            kwargs.pop("temperature", None)
+            try:
+                response = client.responses.create(**kwargs)
+            except Exception as retry_exc:
+                raise LLMError(str(retry_exc)) from retry_exc
+        else:
+            raise LLMError(str(exc)) from exc
+    return _output_text(response)
+
+
 def extract_json_object(text: str) -> dict[str, Any]:
     cleaned = text.strip()
     if cleaned.startswith("```"):

@@ -1,17 +1,38 @@
 # AI Skeleton Voiceover Generator
 
-A private Streamlit app for a VA to turn TikTok Shop product information into a Script DNA voiceover, run a TikTok Shop compliance audit, save/recall scripts, generate ElevenLabs TTS, remove silence, and download a clean MP3.
+A private Streamlit app for a VA to paste a TikTok Shop URL (or enter details manually), pull product information and listing photos through SociaVault, read benefit/ingredient text from those photos, generate a Script DNA voiceover, run TikTok Shop compliance, save/recall scripts, create ElevenLabs TTS, remove silence, and download a clean MP3.
 
 ## Daily VA workflow
 
-1. Paste **Product Name** + **Product Details**.
-2. Generate the Script DNA voiceover.
+1. Paste a **TikTok Shop Product URL** and click **Fetch Product**. The app fills the product name/details and reads up to 12 listing photos for visible benefits, ingredients, directions, differentiators, and warnings. You can still enter product details manually instead.
+2. Review/edit the fetched product information, then generate the Script DNA voiceover.
 3. Review the compliance result.
 4. If green, continue. If a known false positive appears, edit/recheck or use **Manual compliance override** after reviewing it.
 5. Save the script to the **Saved Script Library** if you want to recall it later.
 6. Generate ElevenLabs audio.
 7. Silence removal runs automatically with a default keep-silence value of **0.03 seconds**.
 8. Play/download the cleaned MP3.
+
+## TikTok Shop product scraping
+
+The app uses SociaVault's TikTok Shop Product Details endpoint. Add this Streamlit secret:
+
+```toml
+SOCIAVAULT_API_KEY = "sk_live_..."
+```
+
+The fetch step uses listing title, seller/category context, seller-provided description text, specifications, product gallery photos, and rich-description images. It intentionally excludes **price, discounts/coupons, stock, shipping offers, and scarcity** from the Script DNA source.
+
+The app sends up to 12 listing images to the configured OpenAI script model to extract only visibly supported:
+
+- benefits written on the photos
+- ingredients/components
+- usage/directions
+- differentiators
+- warnings/limitations
+- other useful visible product text
+
+The image reader is extraction-only: it must not infer transformations or medical effects from imagery, and testimonial language is not treated as a verified product claim. Photo text is then passed through the same strict product-fact extractor and compliance workflow.
 
 ## Important compliance behavior
 
@@ -76,6 +97,7 @@ When these secrets are present, the app saves the library into `data/saved_scrip
 - `services/elevenlabs.py` — text-to-speech
 - `services/silence.py` — Hugging Face silence remover + local fallback
 - `services/script_library.py` — local/GitHub persistent saved-script storage
+- `services/sociavault.py` — TikTok Shop URL fetch, listing normalization, product-photo analysis
 - `data/saved_scripts.json` — empty starter library / GitHub-backed library file
 - `packages.txt` — installs ffmpeg for audio processing
 
@@ -92,6 +114,7 @@ When these secrets are present, the app saves the library into `data/saved_scrip
 ```toml
 OPENAI_API_KEY = "sk-..."
 ELEVENLABS_API_KEY = "..."
+SOCIAVAULT_API_KEY = "sk_live_..."
 ```
 
 Recommended:
@@ -106,6 +129,7 @@ Optional model overrides:
 ```toml
 OPENAI_MODEL_SCRIPT = "gpt-5.4-mini"
 OPENAI_MODEL_COMPLIANCE = "gpt-5.4-mini"
+OPENAI_MODEL_VISION = "gpt-5.4-mini"
 ELEVENLABS_MODEL = "eleven_multilingual_v2"
 ```
 

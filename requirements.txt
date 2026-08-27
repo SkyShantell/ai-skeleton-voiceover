@@ -3,3 +3,5 @@ openai>=1.75
 requests>=2.32
 gradio_client>=1.8
 pydub>=0.25.1
+
+audioop-lts==0.2.2; python_version >= "3.13"

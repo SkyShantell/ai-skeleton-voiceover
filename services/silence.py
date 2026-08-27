@@ -6,8 +6,16 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
+def _load_pydub():
+    try:
+        from pydub import AudioSegment
+        from pydub.silence import split_on_silence
+        return AudioSegment, split_on_silence
+    except ModuleNotFoundError as exc:
+        raise SilenceRemovalError(
+            "Audio processing dependency failed to load. On Python 3.13+ ensure "
+            "audioop-lts is installed from requirements.txt."
+        ) from exc
 
 
 class SilenceRemovalError(RuntimeError):
@@ -15,11 +23,13 @@ class SilenceRemovalError(RuntimeError):
 
 
 def _duration_seconds(audio_bytes: bytes, fmt: str = "mp3") -> float:
+    AudioSegment, _ = _load_pydub()
     audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format=fmt)
     return len(audio) / 1000.0
 
 
 def _to_mp3_bytes(path: str | Path) -> bytes:
+    AudioSegment, _ = _load_pydub()
     audio = AudioSegment.from_file(str(path))
     buf = io.BytesIO()
     audio.export(buf, format="mp3", bitrate="128k")
@@ -27,6 +37,7 @@ def _to_mp3_bytes(path: str | Path) -> bytes:
 
 
 def remove_silence_local(raw_mp3: bytes, keep_seconds: float = 0.05) -> bytes:
+    AudioSegment, split_on_silence = _load_pydub()
     source = AudioSegment.from_file(io.BytesIO(raw_mp3), format="mp3")
     keep_ms = max(0, int(float(keep_seconds) * 1000))
     chunks = split_on_silence(

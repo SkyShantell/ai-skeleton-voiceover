@@ -65,19 +65,23 @@ streamlit run app.py
 
 `packages.txt` tells Streamlit Cloud to install ffmpeg automatically.
 
+### Python 3.13 / 3.14 compatibility
+
+The app includes `audioop-lts` for Python 3.13+ because the standard-library `audioop` module was removed in Python 3.13. This keeps the local pydub silence-removal fallback working on current Streamlit Cloud Python versions.
+
 ## Secrets
 
 Required:
 
 ```toml
-OPENAI_API_KEY = "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"
-ELEVENLABS_API_KEY = "sk_422dc08ee2db7ded3d2ca8a7577246c3bce913143db602fe"
+OPENAI_API_KEY = "sk-..."
+ELEVENLABS_API_KEY = "..."
 ```
 
 Recommended:
 
 ```toml
-APP_PASSWORD = "1H@ppyVa"
+APP_PASSWORD = "team-password"
 HF_TOKEN = "hf_..."
 ```
 

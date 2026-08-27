@@ -732,7 +732,6 @@ with left:
                     get_related_videos=False,
                 )
             reset_output(clear_loaded_id=True)
-            st.session_state.tiktok_product_url_input = tiktok_product_url.strip()
             st.session_state.scraped_product = scraped
             st.session_state.selected_product_image_urls = (scraped.get("images") or [])[:8]
             st.session_state.product_image_facts = ""
